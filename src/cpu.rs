@@ -4,6 +4,20 @@ use crate::memory::Memory;
 pub struct Cpu {
     pub registers: Registers,
     pub memory: Memory,
+    pub halted: bool,
+    pub stopped: bool,
+    pub interrupts_enabled: bool,
+}
+
+pub enum RegisterTarget {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    H,
+    L,
 }
 
 impl Cpu {
@@ -12,6 +26,9 @@ impl Cpu {
         Cpu {
             registers: Registers::new(),
             memory: Memory::new(),
+            halted: false,
+            stopped: false,
+            interrupts_enabled: true,
         }
 
     }
@@ -64,11 +81,11 @@ impl Cpu {
     fn and(&mut self, data: u8) {
         self.registers.a &= data;
         if self.registers.a == 0 {
-            self.registers.set_zero();
+            self.registers.set_zero(1);
         }
-        self.registers.clear_addsub();
-        self.registers.clear_carry();
-        self.registers.set_halfcarry();
+        self.registers.set_addsub(0);
+        self.registers.set_carry(0);
+        self.registers.set_halfcarry(1);
         
     }
 
@@ -76,31 +93,31 @@ impl Cpu {
     fn or(&mut self, data: u8) {
         self.registers.a |= data;
         if self.registers.a == 0 {
-            self.registers.set_zero();
+            self.registers.set_zero(1);
         }
-        self.registers.clear_addsub();
-        self.registers.clear_halfcarry();
-        self.registers.clear_carry();
+        self.registers.set_addsub(0);
+        self.registers.set_halfcarry(0);
+        self.registers.set_carry(0);
     }
 
     //double check flags for this one
     fn xor(&mut self, data: u8) {
         self.registers.a ^= data;
         if self.registers.a == 0 {
-            self.registers.set_zero();
+            self.registers.set_zero(1);
         }
-        self.registers.clear_addsub();
-        self.registers.clear_halfcarry();
-        self.registers.clear_carry();
+        self.registers.set_addsub(0);
+        self.registers.set_halfcarry(0);
+        self.registers.set_carry(0);
     }
 
     //Fix flags and implementation
     fn cmp(&mut self, data: u8) {
         if self.registers.a - data == 0 {
-            self.registers.set_zero();
+            self.registers.set_zero(1);
         }
         else {
-            self.registers.clear_zero();
+            self.registers.set_zero(0);
         }
     }
 
@@ -380,10 +397,263 @@ impl Cpu {
             0x1B => {self.registers.set_de(self.registers.get_de()-1); 2},
             0x2B => {self.registers.set_hl(self.registers.get_hl()-1); 2},
             0x3B => {self.registers.sp -= 1; 2},
-
-
-
+            //Decimal adjust register A
+            0x27 => {}, //Implement
+            //CPL Register A
+            0x2F => {self.cpl(); 1},
+            //CCF
+            0x3F => {self.ccf(); 1},
+            //SCF
+            0x37 => {self.scf(); 1},
+            //NOP
+            0x0 => {1},
+            //HALT - power down cpu until interrupt occurs
+            0x76 => {self.halted = true; 1},
+            //STOP -halt cpu and lcd display until button pressed
+            0x10 => {self.stopped = true; 1},
+            //Make sure these two wait until after instruction is 
+            //executed to change interrupt status
+            //DI 
+            0xF3 => {self.interrupts_enabled = false; 1},
+            //EI
+            0xFB => {self.interrupts_enabled = true; 1},
+            //RLCA - rotate A left. old bit 7 to carry flag
+            0x07 => {self.rlca(); 1},
+            //RLA - rotate A left through Carry flag
+            0x17 => {self.rla(); 1},
+            //RRCA - rotate A right. old bit 0 to Carry flag
+            0x0F => {self.rrca(); 1},
+            //RRA - rotate A right through Carry flag
+            0x1F => {self.rra(); 1},
         };
+
+    }
+
+    fn rrca(&mut self) {
+        let old_carry: u8 = if self.registers.check_carry() {
+            1u8
+        }
+        else {
+            0u8
+        };
+        let new_carry = self.registers.a & 1u8;
+        self.registers.a = self.registers.a >> 1;
+        self.registers.a |= old_carry << 7;
+        self.registers.set_zero(0);
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+    }
+
+    fn rra(&mut self) {
+        let new_carry = self.registers.a & 1u8;
+        self.registers.a = self.registers.a >> 1;
+        self.registers.a |= new_carry << 7;
+        self.registers.set_zero(0);
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+    }
+
+    fn rlca(&mut self) {
+        let old_carry: u8 = if self.registers.check_carry() {
+            1u8
+        }
+        else {
+            0u8
+        };
+        let new_carry = (self.registers.a & (1u8 << 7)) >> 7;
+        self.registers.a = self.registers.a << 1;
+        self.registers.a |= old_carry;
+        self.registers.set_zero(0);
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+    }
+
+    fn rla(&mut self) {
+        let new_carry = self.registers.a & (1u8 << 7) >> 7;
+        self.registers.a = self.registers.a << 1;
+        self.registers.a |= new_carry;
+        self.registers.set_zero(0);
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+    }
+
+    fn rlc(&mut self, data: u8) -> u8 {
+        let old_carry: u8 = if self.registers.check_carry() {
+            1u8
+        }
+        else {
+            0u8
+        };
+        let new_carry = data & (1u8 << 7) >> 7;
+        data = data << 1;
+        data |= old_carry;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+        data
+    }
+
+    fn rl(&mut self, data: u8) -> u8 {
+        let new_carry = data & (1u8 << 7) >> 7;
+        data = data << 1;
+        data |= new_carry;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+        data
+    }
+
+    fn rrc(&mut self, data: u8) -> u8 {
+        let old_carry: u8 = if self.registers.check_carry() {
+            1u8
+        }
+        else {
+            0u8
+        };
+        let new_carry = data & 1u8;
+        data = data >> 1;
+        data |= old_carry << 7;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+        data
+    }
+
+    fn rr(&mut self, data: u8) -> u8 {
+        let new_carry = data & 1u8;
+        data = data << 1;
+        data |= new_carry << 7;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+        data
+    }
+
+
+
+    //set carry flag
+    fn scf(&mut self) {
+        self.registers.set_carry(1u8);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+    }
+
+    //Complement carry flag, reset h and n flags
+    fn ccf(&mut self) {
+        let cf = self.registers.check_carry();
+        if cf {
+            self.registers.set_carry(0);
+        }
+        else {
+            self.registers.set_carry(1);
+        }
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+
+    }
+
+
+    //complement A register
+    fn cpl(&mut self) {
+        self.registers.a = !self.registers.a;
+        self.registers.set_halfcarry(1);
+        self.registers.set_addsub(1);
+    }
+
+    fn swap(&mut self, data: u8) -> u8 {
+        let lower = (data & 0xF0) >> 4;
+        let upper = (data & 0x0F) << 4;
+        let swapped: u8 = upper | lower;
+        if swapped == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_addsub(0);
+        self.registers.set_carry(0);
+        self.registers.set_halfcarry(0);
+        swapped
+    }
+
+    fn cb_decode(&mut self, opcode: u8) {
+        let cycles = match opcode{
+            //SWAP upper and lower nibbles of n
+            0x37 => {self.registers.a = self.swap(self.registers.a); 2},
+            0x30 => {self.registers.b = self.swap(self.registers.b); 2},
+            0x31 => {self.registers.c = self.swap(self.registers.c); 2},
+            0x32 => {self.registers.d = self.swap(self.registers.d); 2},
+            0x33 => {self.registers.e = self.swap(self.registers.e); 2},
+            0x34 => {self.registers.h = self.swap(self.registers.h); 2},
+            0x35 => {self.registers.l = self.swap(self.registers.l); 2},
+            0x36 => {let address = self.registers.get_hl(); self.memory.write_byte(address, self.swap(self.memory.read_byte(address))); 4},
+            //RLC n - rotate n left. old bit 7 to carry flag
+            0x07 => {self.registers.a = self.rlc(self.registers.a); 2},
+            0x00 => {self.registers.b = self.rlc(self.registers.b); 2},
+            0x01 => {self.registers.c = self.rlc(self.registers.c); 2},
+            0x02 => {self.registers.d = self.rlc(self.registers.d); 2},
+            0x03 => {self.registers.e = self.rlc(self.registers.e); 2},
+            0x04 => {self.registers.h = self.rlc(self.registers.h); 2},
+            0x05 => {self.registers.l = self.rlc(self.registers.l); 2},
+            0x06 => {self.memory.write_byte(self.registers.get_hl(), self.rlc(self.memory.read_byte(self.registers.get_hl()))); 4},
+            //RL n - rotate n left through carry flag
+            0x17 => {self.registers.a = self.rl(self.registers.a); 2},
+            0x10 => {self.registers.b = self.rl(self.registers.b); 2},
+            0x11 => {self.registers.c = self.rl(self.registers.c); 2},
+            0x12 => {self.registers.d = self.rl(self.registers.d); 2},
+            0x13 => {self.registers.e = self.rl(self.registers.e); 2},
+            0x14 => {self.registers.h = self.rl(self.registers.h); 2},
+            0x15 => {self.registers.l = self.rl(self.registers.l); 2},
+            0x16 => {self.memory.write_byte(self.registers.get_hl(), self.rl(self.memory.read_byte(self.registers.get_hl()))); 4},
+            //RRC n - rotate n right, old bit 0 to carry flag
+            0x0F => {self.registers.a = self.rrc(self.registers.a); 2},
+            0x08 => {self.registers.b = self.rrc(self.registers.b); 2},
+            0x09 => {self.registers.c = self.rrc(self.registers.c); 2},
+            0x0A => {self.registers.d = self.rrc(self.registers.d); 2},
+            0x0B => {self.registers.e = self.rrc(self.registers.e); 2},
+            0x0C => {self.registers.h = self.rrc(self.registers.h); 2},
+            0x0D => {self.registers.l = self.rrc(self.registers.l); 2},
+            0x0E => {self.memory.write_byte(self.registers.get_hl(), self.rrc(self.memory.read_byte(self.registers.get_hl()))); 4},
+            //RR n - rotate n right through carry flag
+            0x1F => {self.registers.a = self.rr(self.registers.a); 2},
+            0x18 => {self.registers.b = self.rr(self.registers.b); 2},
+            0x19 => {self.registers.c = self.rr(self.registers.c); 2},
+            0x1A => {self.registers.d = self.rr(self.registers.d); 2},
+            0x1B => {self.registers.e = self.rr(self.registers.e); 2},
+            0x1C => {self.registers.h = self.rr(self.registers.h); 2},
+            0x1D => {self.registers.l = self.rr(self.registers.l); 2},
+            0x1E => {self.memory.write_byte(self.registers.get_hl(), self.rr(self.memory.read_byte(self.registers.get_hl()))); 4},
+         
+
+        }
 
     }
 

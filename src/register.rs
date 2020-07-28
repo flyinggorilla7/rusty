@@ -69,48 +69,52 @@ impl Registers {
     //5 - Half Carry Flag
     //4 - Carry Flag
     //3-0 Not used (Always Zero)
-    pub fn set_zero(&mut self) {
-        self.f |= 1u8 << 7;
-    }
-
-    pub fn clear_zero(&mut self) {
-        self.f &= !(1u8 << 7);
+    pub fn set_zero(&mut self, value: u8) {
+        if value == 1 {
+            self.f |= 1u8 << 7;
+        }
+        else {
+            self.f &= !(1u8 << 7);
+        }
     }
 
     pub fn check_zero(&self) -> bool {
         (self.f & (1u8 << 7)) != 0 
     }
 
-    pub fn set_addsub(&mut self) {
-        self.f |= 1u8 << 6;
-    }
-
-    pub fn clear_addsub(&mut self) {
-        self.f &= !(1u8 << 6);
+    pub fn set_addsub(&mut self, value: u8) {
+        if value == 1{
+            self.f |= 1u8 << 6;
+        }
+        else {
+            self.f &= !(1u8 << 6);
+        }
     }
 
     pub fn check_addsub(&self) -> bool {
         (self.f & (1u8 << 6)) != 0
     }
 
-    pub fn set_halfcarry(&mut self) {
-        self.f |= 1u8 << 5;
-    }
-
-    pub fn clear_halfcarry(&mut self) {
-        self.f &= !(1u8 << 5);
+    pub fn set_halfcarry(&mut self, value: u8) {
+        if value == 1{
+            self.f |= 1u8 << 5;
+        }
+        else {
+            self.f &= !(1u8 << 5);
+        }
     }
 
     pub fn check_halfcarry(&self) -> bool {
         (self.f & (1u8 << 5)) != 0
     }
 
-    pub fn set_carry(&mut self) {
-        self.f |= 1u8 << 4;
-    }
-
-    pub fn clear_carry(&mut self) {
-        self.f &= !(1u8 << 4);
+    pub fn set_carry(&mut self, value: u8) {
+        if value == 1 {
+            self.f |= 1u8 << 4;
+        }
+        else {
+            self.f &= !(1u8 << 4);
+        }
     }
 
     pub fn check_carry(&self) -> bool {
