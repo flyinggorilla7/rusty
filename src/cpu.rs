@@ -6,25 +6,6 @@ pub struct Cpu {
     pub memory: Memory,
 }
 
-const OP_CYCLES: [u32; 256] = [
-    1, 3, 2, 2, 1, 1, 2, 1, 5, 2, 2, 2, 1, 1, 2, 1, // 0
-    0, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1, // 1
-    2, 3, 2, 2, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 2, 1, // 2
-    2, 3, 2, 2, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 2, 1, // 3
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 4
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 5
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 6
-    2, 2, 2, 2, 2, 2, 0, 2, 1, 1, 1, 1, 1, 1, 2, 1, // 7
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 8
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 9
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // a
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // b
-    2, 3, 3, 4, 3, 4, 2, 4, 2, 4, 3, 0, 3, 6, 2, 4, // c
-    2, 3, 3, 0, 3, 4, 2, 4, 2, 4, 3, 0, 3, 0, 2, 4, // d
-    3, 3, 2, 0, 0, 4, 2, 4, 4, 1, 4, 0, 0, 0, 2, 4, // e
-    3, 3, 2, 1, 0, 4, 2, 4, 3, 2, 4, 1, 0, 0, 2, 4, // f
-];
-
 impl Cpu {
 
     pub fn new() -> Cpu {
@@ -127,7 +108,23 @@ impl Cpu {
         //Implement
     }
 
+    fn inc16(&mut self, data: u16) {
+
+    }
+
+    fn dec16(&mut self, data: u16) {
+
+    }
+
     fn dec(&mut self, data: u8) {
+        //Implement
+    }
+
+    fn add_hl(&mut self, data: u16) {
+        //Implement
+    }
+
+    fn add_sp(&mut self, data: u16) {
         //Implement
     }
 
@@ -364,7 +361,27 @@ impl Cpu {
             0x25 => {self.registers.h -= 1; 1},
             0x2D => {self.registers.l -= 1; 1},
             0x35 => {self.memory.dec_memory_byte(self.registers.get_hl()); 3},
-            //Add 16 bit
+            //Add to HL
+            0x09 => {self.add_hl(self.registers.get_bc()); 2},
+            0x19 => {self.add_hl(self.registers.get_de()); 2},
+            0x29 => {self.add_hl(self.registers.get_hl()); 2},
+            0x39 => {self.add_hl(self.registers.sp); 2},
+            //Add to SP
+            0xE8 => {self.add_sp(self.next_byte() as u16 ); 4},
+            //INC register nn
+            //CHECK FLAGS FOR THESE
+            0x03 => {self.registers.set_bc(self.registers.get_bc()+1); 2},
+            0x13 => {self.registers.set_de(self.registers.get_de()+1); 2},
+            0x23 => {self.registers.set_hl(self.registers.get_hl()+1); 2},
+            0x33 => {self.registers.sp += 1; 2},
+            //DEC register nn
+            //CHECK FLAGS FOR THESE
+            0x0B => {self.registers.set_bc(self.registers.get_bc()-1); 2},
+            0x1B => {self.registers.set_de(self.registers.get_de()-1); 2},
+            0x2B => {self.registers.set_hl(self.registers.get_hl()-1); 2},
+            0x3B => {self.registers.sp -= 1; 2},
+
+
 
         };
 
