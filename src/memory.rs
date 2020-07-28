@@ -31,14 +31,30 @@ impl Memory {
         self.memory[address as usize]
     }
 
-    //CHECK ENDIANESS
+    //CHECK ENDIANESS, edit... might be ok now
     pub fn read_word(&self, address: u16) -> u16 {
-        let upper: u8 = self.memory[address as usize];
-        let lower: u8 = self.memory[(address+1) as usize];
+        let lower: u8 = self.memory[address as usize];
+        let upper: u8 = self.memory[(address+1) as usize];
         ((upper as u16) << 8) | (lower as u16) 
     }
 
     pub fn write_byte(&mut self, address: u16, data: u8) {
         self.memory[address as usize] = data;
+    }
+
+    pub fn inc_memory_byte(&mut self, address: u16) {
+        self.memory[address as usize] += 1;
+    }
+
+    pub fn dec_memory_byte(&mut self, address: u16) {
+        self.memory[address as usize] -= 1;
+    }
+
+    //Check endianess, I think this one is good though
+    pub fn write_word(&mut self, address: u16, data: u16) {
+        let upper: u8 = ((data & 0xFF00) >> 8) as u8;
+        let lower: u8 = (data & 0x00FF) as u8;
+        self.memory[address as usize] = lower;
+        self.memory[(address+1) as usize] = upper;
     }
 }
