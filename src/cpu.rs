@@ -603,6 +603,56 @@ impl Cpu {
         self.registers.set_halfcarry(0);
         swapped
     }
+    //shift n left into Carry, LSB set to 0
+    fn sla(&mut self, data: u8) -> u8 {
+        let new_carry = (data & (1u8 << 7)) >> 7;
+        data = data << 1;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_addsub(0);
+        self.registers.set_halfcarry(0);
+        data
+    }
+
+    //shift n right into Carry. MSB doesn't change
+    fn sra(&mut self, data: u8) -> u8 {
+        let msb = (data & (1u8 << 7)) >> 7;
+        let new_carry = data & 1u8;
+        data = data >> 1;
+        data |= msb;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_addsub(0);
+        self.registers.set_halfcarry(0);
+        data
+    }
+
+    //shift n right into Carry. MSB=0
+    fn srl(&mut self, data: u8) -> u8 {
+        let new_carry = data & 1u8;
+        data = data >> 1;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_addsub(0);
+        self.registers.set_halfcarry(0);
+        data
+    }
+
 
     fn cb_decode(&mut self, opcode: u8) {
         let cycles = match opcode{
@@ -651,11 +701,268 @@ impl Cpu {
             0x1C => {self.registers.h = self.rr(self.registers.h); 2},
             0x1D => {self.registers.l = self.rr(self.registers.l); 2},
             0x1E => {self.memory.write_byte(self.registers.get_hl(), self.rr(self.memory.read_byte(self.registers.get_hl()))); 4},
-         
+            //SLA n - shift n left into carry flag, LSB=0
+            0x27 => {self.registers.a = self.sla(self.registers.a); 2},
+            0x20 => {self.registers.b = self.sla(self.registers.b); 2},
+            0x21 => {self.registers.c = self.sla(self.registers.c); 2},
+            0x22 => {self.registers.d = self.sla(self.registers.d); 2},
+            0x23 => {self.registers.e = self.sla(self.registers.e); 2},
+            0x24 => {self.registers.h = self.sla(self.registers.h); 2},
+            0x25 => {self.registers.l = self.sla(self.registers.l); 2},
+            0x26 => {self.memory.write_byte(self.registers.get_hl(), self.sla(self.memory.read_byte(self.registers.get_hl()))); 4},
+            //SRA n - shift n right into carry flag. MSB doesn't change
+            0x2F => {self.registers.a = self.sra(self.registers.a); 2},
+            0x28 => {self.registers.b = self.sra(self.registers.b); 2},
+            0x29 => {self.registers.c = self.sra(self.registers.c); 2},
+            0x2A => {self.registers.d = self.sra(self.registers.d); 2},
+            0x2B => {self.registers.e = self.sra(self.registers.e); 2},
+            0x2C => {self.registers.h = self.sra(self.registers.h); 2},
+            0x2D => {self.registers.l = self.sra(self.registers.l); 2},
+            0x2E => {self.memory.write_byte(self.registers.get_hl(), self.sra(self.memory.read_byte(self.registers.get_hl()))); 4},
+            //SRA n - shift n right into carry flag. MSB=0
+            0x3F => {self.registers.a = self.srl(self.registers.a); 2},
+            0x38 => {self.registers.b = self.srl(self.registers.b); 2},
+            0x39 => {self.registers.c = self.srl(self.registers.c); 2},
+            0x3A => {self.registers.d = self.srl(self.registers.d); 2},
+            0x3B => {self.registers.e = self.srl(self.registers.e); 2},
+            0x3C => {self.registers.h = self.srl(self.registers.h); 2},
+            0x3D => {self.registers.l = self.srl(self.registers.l); 2},
+            0x3E => {self.memory.write_byte(self.registers.get_hl(), self.srl(self.memory.read_byte(self.registers.get_hl()))); 4},
+            //Test bit 0
+            0x40 => {self.check_bit(self.registers.b, 0); 2},
+            0x41 => {self.check_bit(self.registers.c, 0); 2},
+            0x42 => {self.check_bit(self.registers.d, 0); 2},
+            0x43 => {self.check_bit(self.registers.e, 0); 2},
+            0x44 => {self.check_bit(self.registers.h, 0); 2},
+            0x45 => {self.check_bit(self.registers.l, 0); 2},
+            0x46 => {self.check_bit(self.memory.read_byte(self.registers.get_hl()), 0); 4},
+            0x47 => {self.check_bit(self.registers.a, 0); 2},
+            //Test bit 1
+            0x48 => {self.check_bit(self.registers.b, 1); 2},
+            0x49 => {self.check_bit(self.registers.c, 1); 2},
+            0x4A => {self.check_bit(self.registers.d, 1); 2},
+            0x4B => {self.check_bit(self.registers.e, 1); 2},
+            0x4C => {self.check_bit(self.registers.h, 1); 2},
+            0x4D => {self.check_bit(self.registers.l, 1); 2},
+            0x4E => {self.check_bit(self.memory.read_byte(self.registers.get_hl()), 1); 4},
+            0x4F => {self.check_bit(self.registers.a, 1); 2},
+            //Test bit 2
+            0x50 => {self.check_bit(self.registers.b, 2); 2},
+            0x51 => {self.check_bit(self.registers.c, 2); 2},
+            0x52 => {self.check_bit(self.registers.d, 2); 2},
+            0x53 => {self.check_bit(self.registers.e, 2); 2},
+            0x54 => {self.check_bit(self.registers.h, 2); 2},
+            0x55 => {self.check_bit(self.registers.l, 2); 2},
+            0x56 => {self.check_bit(self.memory.read_byte(self.registers.get_hl()), 2); 4},
+            0x57 => {self.check_bit(self.registers.a, 2); 2},            
+            //Test bit 3
+            0x58 => {self.check_bit(self.registers.b, 3); 2},
+            0x59 => {self.check_bit(self.registers.c, 3); 2},
+            0x5A => {self.check_bit(self.registers.d, 3); 2},
+            0x5B => {self.check_bit(self.registers.e, 3); 2},
+            0x5C => {self.check_bit(self.registers.h, 3); 2},
+            0x5D => {self.check_bit(self.registers.l, 3); 2},
+            0x5E => {self.check_bit(self.memory.read_byte(self.registers.get_hl()), 3); 4},
+            0x5F => {self.check_bit(self.registers.a, 3); 2},
+            //Test bit 4
+            0x60 => {self.check_bit(self.registers.b, 4); 2},
+            0x61 => {self.check_bit(self.registers.c, 4); 2},
+            0x62 => {self.check_bit(self.registers.d, 4); 2},
+            0x63 => {self.check_bit(self.registers.e, 4); 2},
+            0x64 => {self.check_bit(self.registers.h, 4); 2},
+            0x65 => {self.check_bit(self.registers.l, 4); 2},
+            0x66 => {self.check_bit(self.memory.read_byte(self.registers.get_hl()), 4); 4},
+            0x67 => {self.check_bit(self.registers.a, 4); 2},            
+            //Test bit 5
+            0x68 => {self.check_bit(self.registers.b, 5); 2},
+            0x69 => {self.check_bit(self.registers.c, 5); 2},
+            0x6A => {self.check_bit(self.registers.d, 5); 2},
+            0x6B => {self.check_bit(self.registers.e, 5); 2},
+            0x6C => {self.check_bit(self.registers.h, 5); 2},
+            0x6D => {self.check_bit(self.registers.l, 5); 2},
+            0x6E => {self.check_bit(self.memory.read_byte(self.registers.get_hl()), 5); 4},
+            0x6F => {self.check_bit(self.registers.a, 5); 2},
+            //Test bit 6
+            0x70 => {self.check_bit(self.registers.b, 6); 2},
+            0x71 => {self.check_bit(self.registers.c, 6); 2},
+            0x72 => {self.check_bit(self.registers.d, 6); 2},
+            0x73 => {self.check_bit(self.registers.e, 6); 2},
+            0x74 => {self.check_bit(self.registers.h, 6); 2},
+            0x75 => {self.check_bit(self.registers.l, 6); 2},
+            0x76 => {self.check_bit(self.memory.read_byte(self.registers.get_hl()), 6); 4},
+            0x77 => {self.check_bit(self.registers.a, 6); 2},            
+            //Test bit 7
+            0x78 => {self.check_bit(self.registers.b, 7); 2},
+            0x79 => {self.check_bit(self.registers.c, 7); 2},
+            0x7A => {self.check_bit(self.registers.d, 7); 2},
+            0x7B => {self.check_bit(self.registers.e, 7); 2},
+            0x7C => {self.check_bit(self.registers.h, 7); 2},
+            0x7D => {self.check_bit(self.registers.l, 7); 2},
+            0x7E => {self.check_bit(self.memory.read_byte(self.registers.get_hl()), 7); 4},
+            0x7F => {self.check_bit(self.registers.a, 7); 2},
+            //Reset bit 0
+            0x80 => {self.registers.b &= !(1u8 << 0); 2},
+            0x81 => {self.registers.c &= !(1u8 << 0); 2},
+            0x82 => {self.registers.d &= !(1u8 << 0); 2},
+            0x83 => {self.registers.e &= !(1u8 << 0); 2},
+            0x84 => {self.registers.h &= !(1u8 << 0); 2},
+            0x85 => {self.registers.l &= !(1u8 << 0); 2},
+            0x86 => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl())  & !(1u8 << 0)); 4},
+            0x87 => {self.registers.a &= !(1u8 << 0); 2},
+            //Reset bit 1
+            0x88 => {self.registers.b &= !(1u8 << 1); 2},
+            0x89 => {self.registers.c &= !(1u8 << 1); 2},
+            0x8A => {self.registers.d &= !(1u8 << 1); 2},
+            0x8B => {self.registers.e &= !(1u8 << 1); 2},
+            0x8C => {self.registers.h &= !(1u8 << 1); 2},
+            0x8D => {self.registers.l &= !(1u8 << 1); 2},
+            0x8E => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl())  & !(1u8 << 1)); 4},
+            0x8F => {self.registers.a &= !(1u8 << 1); 2},
+            //Reset bit 2
+            0x90 => {self.registers.b &= !(1u8 << 2); 2},
+            0x91 => {self.registers.c &= !(1u8 << 2); 2},
+            0x92 => {self.registers.d &= !(1u8 << 2); 2},
+            0x93 => {self.registers.e &= !(1u8 << 2); 2},
+            0x94 => {self.registers.h &= !(1u8 << 2); 2},
+            0x95 => {self.registers.l &= !(1u8 << 2); 2},
+            0x96 => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl())  & !(1u8 << 2)); 4},
+            0x97 => {self.registers.a &= !(1u8 << 2); 2},
+            //Reset bit 3
+            0x98 => {self.registers.b &= !(1u8 << 3); 2},
+            0x99 => {self.registers.c &= !(1u8 << 3); 2},
+            0x9A => {self.registers.d &= !(1u8 << 3); 2},
+            0x9B => {self.registers.e &= !(1u8 << 3); 2},
+            0x9C => {self.registers.h &= !(1u8 << 3); 2},
+            0x9D => {self.registers.l &= !(1u8 << 3); 2},
+            0x9E => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl())  & !(1u8 << 3)); 4},
+            0x9F => {self.registers.a &= !(1u8 << 3); 2},
+            //Reset bit 4
+            0xA0 => {self.registers.b &= !(1u8 << 4); 2},
+            0xA1 => {self.registers.c &= !(1u8 << 4); 2},
+            0xA2 => {self.registers.d &= !(1u8 << 4); 2},
+            0xA3 => {self.registers.e &= !(1u8 << 4); 2},
+            0xA4 => {self.registers.h &= !(1u8 << 4); 2},
+            0xA5 => {self.registers.l &= !(1u8 << 4); 2},
+            0xA6 => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl())  & !(1u8 << 4)); 4},
+            0xA7 => {self.registers.a &= !(1u8 << 4); 2},
+            //Reset bit 5
+            0xA8 => {self.registers.b &= !(1u8 << 5); 2},
+            0xA9 => {self.registers.c &= !(1u8 << 5); 2},
+            0xAA => {self.registers.d &= !(1u8 << 5); 2},
+            0xAB => {self.registers.e &= !(1u8 << 5); 2},
+            0xAC => {self.registers.h &= !(1u8 << 5); 2},
+            0xAD => {self.registers.l &= !(1u8 << 5); 2},
+            0xAE => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl())  & !(1u8 << 5)); 4},
+            0xAF => {self.registers.a &= !(1u8 << 5); 2},
+            //Reset bit 6
+            0xB0 => {self.registers.b &= !(1u8 << 6); 2},
+            0xB1 => {self.registers.c &= !(1u8 << 6); 2},
+            0xB2 => {self.registers.d &= !(1u8 << 6); 2},
+            0xB3 => {self.registers.e &= !(1u8 << 6); 2},
+            0xB4 => {self.registers.h &= !(1u8 << 6); 2},
+            0xB5 => {self.registers.l &= !(1u8 << 6); 2},
+            0xB6 => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl())  & !(1u8 << 6)); 4},
+            0xB7 => {self.registers.a &= !(1u8 << 6); 2},
+            //Reset bit 7
+            0xB8 => {self.registers.b &= !(1u8 << 7); 2},
+            0xB9 => {self.registers.c &= !(1u8 << 7); 2},
+            0xBA => {self.registers.d &= !(1u8 << 7); 2},
+            0xBB => {self.registers.e &= !(1u8 << 7); 2},
+            0xBC => {self.registers.h &= !(1u8 << 7); 2},
+            0xBD => {self.registers.l &= !(1u8 << 7); 2},
+            0xBE => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) & !(1u8 << 7)); 4},
+            0xBF => {self.registers.a &= !(1u8 << 7); 2},
+            //Set bit 0
+            0xC0 => {self.registers.b |= 1u8 << 0; 2},
+            0xC1 => {self.registers.c |= 1u8 << 0; 2},
+            0xC2 => {self.registers.d |= 1u8 << 0; 2},
+            0xC3 => {self.registers.e |= 1u8 << 0; 2},
+            0xC4 => {self.registers.h |= 1u8 << 0; 2},
+            0xC5 => {self.registers.l |= 1u8 << 0; 2},
+            0xC6 => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) | (1u8 << 0)); 4},
+            0xC7 => {self.registers.a |= 1u8 << 0; 2},
+            //Set bit 1
+            0xC8 => {self.registers.b |= 1u8 << 1; 2},
+            0xC9 => {self.registers.c |= 1u8 << 1; 2},
+            0xCA => {self.registers.d |= 1u8 << 1; 2},
+            0xCB => {self.registers.e |= 1u8 << 1; 2},
+            0xCC => {self.registers.h |= 1u8 << 1; 2},
+            0xCD => {self.registers.l |= 1u8 << 1; 2},
+            0xCE => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) | (1u8 << 1)); 4},
+            0xCF => {self.registers.a |= 1u8 << 1; 2},
+            //Set bit 2
+            0xD0 => {self.registers.b |= 1u8 << 2; 2},
+            0xD1 => {self.registers.c |= 1u8 << 2; 2},
+            0xD2 => {self.registers.d |= 1u8 << 2; 2},
+            0xD3 => {self.registers.e |= 1u8 << 2; 2},
+            0xD4 => {self.registers.h |= 1u8 << 2; 2},
+            0xD5 => {self.registers.l |= 1u8 << 2; 2},
+            0xD6 => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) | (1u8 << 2)); 4},
+            0xD7 => {self.registers.a |= 1u8 << 2; 2},
+            //Set bit 3
+            0xD8 => {self.registers.b |= 1u8 << 3; 2},
+            0xD9 => {self.registers.c |= 1u8 << 3; 2},
+            0xDA => {self.registers.d |= 1u8 << 3; 2},
+            0xDB => {self.registers.e |= 1u8 << 3; 2},
+            0xDC => {self.registers.h |= 1u8 << 3; 2},
+            0xDD => {self.registers.l |= 1u8 << 3; 2},
+            0xDE => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) | (1u8 << 3)); 4},
+            0xDF => {self.registers.a |= 1u8 << 3; 2},
+            //Set bit 4
+            0xE0 => {self.registers.b |= 1u8 << 4; 2},
+            0xE1 => {self.registers.c |= 1u8 << 4; 2},
+            0xE2 => {self.registers.d |= 1u8 << 4; 2},
+            0xE3 => {self.registers.e |= 1u8 << 4; 2},
+            0xE4 => {self.registers.h |= 1u8 << 4; 2},
+            0xE5 => {self.registers.l |= 1u8 << 4; 2},
+            0xE6 => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) | (1u8 << 4)); 4},
+            0xE7 => {self.registers.a |= 1u8 << 4; 2},
+            //Set bit 5
+            0xE8 => {self.registers.b |= 1u8 << 5; 2},
+            0xE9 => {self.registers.c |= 1u8 << 5; 2},
+            0xEA => {self.registers.d |= 1u8 << 5; 2},
+            0xEB => {self.registers.e |= 1u8 << 5; 2},
+            0xEC => {self.registers.h |= 1u8 << 5; 2},
+            0xED => {self.registers.l |= 1u8 << 5; 2},
+            0xEE => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) | (1u8 << 5)); 4},
+            0xEF => {self.registers.a |= 1u8 << 5; 2},
+            //Set bit 6
+            0xF0 => {self.registers.b |= 1u8 << 6; 2},
+            0xF1 => {self.registers.c |= 1u8 << 6; 2},
+            0xF2 => {self.registers.d |= 1u8 << 6; 2},
+            0xF3 => {self.registers.e |= 1u8 << 6; 2},
+            0xF4 => {self.registers.h |= 1u8 << 6; 2},
+            0xF5 => {self.registers.l |= 1u8 << 6; 2},
+            0xF6 => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) | (1u8 << 6)); 4},
+            0xF7 => {self.registers.a |= 1u8 << 6; 2},
+            //Set bit 7
+            0xF8 => {self.registers.b |= 1u8 << 7; 2},
+            0xF9 => {self.registers.c |= 1u8 << 7; 2},
+            0xFA => {self.registers.d |= 1u8 << 7; 2},
+            0xFB => {self.registers.e |= 1u8 << 7; 2},
+            0xFC => {self.registers.h |= 1u8 << 7; 2},
+            0xFD => {self.registers.l |= 1u8 << 7; 2},
+            0xFE => {self.memory.write_byte(self.registers.get_hl(), self.memory.read_byte(self.registers.get_hl()) | (1u8 << 7)); 4},
+            0xFF => {self.registers.a |= 1u8 << 7; 2},
 
-        }
+
+        };
 
     }
+
+    //check if bit is zero
+    fn check_bit(&mut self, data: u8, bit: u8) {
+        let result = data & (1u8 << bit);
+        if result == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        } 
+        self.registers.set_addsub(0);
+        self.registers.set_halfcarry(1);
+    }
+
 
 
 
