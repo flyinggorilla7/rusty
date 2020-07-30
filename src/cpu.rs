@@ -87,7 +87,7 @@ impl Cpu {
     }
 
     //Add 8 bit value + carry, set appropriate values
-    fn add8_carry(&mut self, data: u8) {
+    fn add8_carry(&mut self, mut data: u8) {
         if self.registers.check_carry() {
             if self.registers.a < data {
                 self.registers.a += 1;
@@ -143,7 +143,7 @@ impl Cpu {
     }
 
     //Sub 8 bit value and carry, set appropriate flags
-    fn sub8_carry(&mut self, data: u8) {
+    fn sub8_carry(&mut self, mut data: u8) {
         if self.registers.check_carry() {
             if self.registers.a > data {
                 self.registers.a -= 1;
@@ -228,7 +228,7 @@ impl Cpu {
     }
 
     //INC, check for zero and half-carry flag
-    fn inc(&mut self, data: u8) -> u8 {
+    fn inc(&mut self, mut data: u8) -> u8 {
         if((data & 0xF) + (1u8 & 0xF)) & 0x10 == 0x10 {
             self.registers.set_halfcarry(1);
         }
@@ -246,14 +246,7 @@ impl Cpu {
         data
     }
 
-    fn inc16(&mut self, data: u16) {
-    }
-
-    fn dec16(&mut self, data: u16) {
-
-    }
-
-    fn dec(&mut self, data: u8) -> u8 {
+    fn dec(&mut self, mut data: u8) -> u8 {
         if data & 0xF == 0 {
             self.registers.set_halfcarry(1);
         }
@@ -285,7 +278,7 @@ impl Cpu {
 
         let opcode = self.next_byte();
 
-        let cycles:u8 = match opcode {
+        let cycles: u8 = match opcode {
 
             //load n with immediate 8 bit value
             0x06 => {self.registers.b = self.next_byte(); 2}, //load b with n
@@ -530,7 +523,7 @@ impl Cpu {
             0x2B => {self.registers.set_hl(self.registers.get_hl()-1); 2},
             0x3B => {self.registers.sp -= 1; 2},
             //Decimal adjust register A
-            0x27 => {}, //Implement
+            0x27 => {1}, //Implement
             //CPL Register A
             0x2F => {self.cpl(); 1},
             //CCF
@@ -557,6 +550,52 @@ impl Cpu {
             0x0F => {self.rrca(); 1},
             //RRA - rotate A right through Carry flag
             0x1F => {self.rra(); 1},
+            //JP nn
+            0xC3 => {self.registers.pc = self.next_word(); 3},
+            //JP to nn if coniditon is true
+            0xC2 => {if !self.registers.check_zero(){self.registers.pc = self.next_word()}; 3},
+            0xCA => {if self.registers.check_zero(){self.registers.pc = self.next_word()}; 3},
+            0xD2 => {if !self.registers.check_carry(){self.registers.pc = self.next_word()}; 3},
+            0xDA => {if self.registers.check_carry(){self.registers.pc = self.next_word()}; 3},
+            //JP to address contained in HL
+            0xE9 => {self.registers.pc = self.registers.get_hl(); 1},
+            //JR n - add n to current address and jump to it
+            0x18 => {self.registers.pc += self.next_byte() as u16; 2},
+            //JR cc,n - add n to current address and jump if flag is set
+            0x20 => {if !self.registers.check_zero(){self.registers.pc += self.next_byte() as u16}; 2},
+            0x28 => {if self.registers.check_zero(){self.registers.pc += self.next_byte() as u16}; 2},
+            0x30 => {if !self.registers.check_carry(){self.registers.pc += self.next_byte() as u16}; 2},
+            0x38 => {if self.registers.check_carry(){self.registers.pc += self.next_byte() as u16}; 2},
+            //Calls
+            //Call nn, push address of next instruction onto stack, then jump to nn
+            //Not sure about this one
+            0xCD => {self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); 3},
+            //Call nn if condition is true
+            0xC4 => {if !self.registers.check_zero(){self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); } 3},
+            0xCC => {if self.registers.check_zero(){self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); } 3},
+            0xD4 => {if !self.registers.check_carry(){self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); } 3},
+            0xDC => {if self.registers.check_carry(){self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); } 3},
+            //Restarts - push present address to stack, jump to $0000 + x
+            0xC7 => {self.push_word(self.registers.pc); self.registers.pc = 0x00; 8},
+            0xCF => {self.push_word(self.registers.pc); self.registers.pc = 0x08; 8},
+            0xD7 => {self.push_word(self.registers.pc); self.registers.pc = 0x10; 8},
+            0xDF => {self.push_word(self.registers.pc); self.registers.pc = 0x18; 8},
+            0xE7 => {self.push_word(self.registers.pc); self.registers.pc = 0x20; 8},
+            0xEF => {self.push_word(self.registers.pc); self.registers.pc = 0x28; 8},
+            0xF7 => {self.push_word(self.registers.pc); self.registers.pc = 0x30; 8},
+            0xFF => {self.push_word(self.registers.pc); self.registers.pc = 0x38; 8},
+            //RET 
+            0xC9 => {self.registers.pc = self.pop_word(); 2},
+            //RET cc
+            0xC0 => {if !self.registers.check_zero(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 2},
+            0xC8 => {if self.registers.check_zero(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 2},
+            0xD0 => {if !self.registers.check_carry(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 2},
+            0xD8 => {if self.registers.check_carry(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 2},
+            //RETI - pop two bytes and jump to address, enable interrupts
+            0xD9 => {self.registers.pc = self.pop_word(); self.interrupts_enabled = true; 2},
+            //CB
+            0xCB => {self.cb_decode(self.next_byte()); 1},
+            _ => {println!("This opcode has not been implemented!"); 1}
         };
 
     }
@@ -635,7 +674,7 @@ impl Cpu {
         data
     }
 
-    fn rl(&mut self, data: u8) -> u8 {
+    fn rl(&mut self, mut data: u8) -> u8 {
         let new_carry = data & (1u8 << 7) >> 7;
         data = data << 1;
         data |= new_carry;
@@ -651,7 +690,7 @@ impl Cpu {
         data
     }
 
-    fn rrc(&mut self, data: u8) -> u8 {
+    fn rrc(&mut self, mut data: u8) -> u8 {
         let old_carry: u8 = if self.registers.check_carry() {
             1u8
         }
@@ -673,7 +712,7 @@ impl Cpu {
         data
     }
 
-    fn rr(&mut self, data: u8) -> u8 {
+    fn rr(&mut self, mut data: u8) -> u8 {
         let new_carry = data & 1u8;
         data = data << 1;
         data |= new_carry << 7;
@@ -736,7 +775,7 @@ impl Cpu {
         swapped
     }
     //shift n left into Carry, LSB set to 0
-    fn sla(&mut self, data: u8) -> u8 {
+    fn sla(&mut self, mut data: u8) -> u8 {
         let new_carry = (data & (1u8 << 7)) >> 7;
         data = data << 1;
         if data == 0 {
@@ -752,7 +791,7 @@ impl Cpu {
     }
 
     //shift n right into Carry. MSB doesn't change
-    fn sra(&mut self, data: u8) -> u8 {
+    fn sra(&mut self, mut data: u8) -> u8 {
         let msb = (data & (1u8 << 7)) >> 7;
         let new_carry = data & 1u8;
         data = data >> 1;
@@ -770,7 +809,7 @@ impl Cpu {
     }
 
     //shift n right into Carry. MSB=0
-    fn srl(&mut self, data: u8) -> u8 {
+    fn srl(&mut self, mut data: u8) -> u8 {
         let new_carry = data & 1u8;
         data = data >> 1;
         if data == 0 {
