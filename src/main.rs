@@ -7,7 +7,9 @@ mod memory;
 fn main() {
     println!("Hello, world!");
 
-    let cpu = cpu::Cpu::new();
+    let mut cpu = cpu::Cpu::new();
+
+    cpu.cycle();
 
     println!("Yummy {}", cpu.registers.sp);
 }

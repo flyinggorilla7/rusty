@@ -11,17 +11,6 @@ pub struct Cpu {
 
 //CHECK WRAPPING
 
-pub enum RegisterTarget {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    H,
-    L,
-}
-
 impl Cpu {
 
     pub fn new() -> Cpu {
@@ -303,7 +292,7 @@ impl Cpu {
 
 
 
-    fn decode_op(&mut self) {
+    pub fn cycle(&mut self) {
 
         let opcode = self.next_byte();
 
@@ -329,7 +318,7 @@ impl Cpu {
             0x0A => {self.registers.a = self.memory.read_byte(self.registers.bc()); 2},
             0x1A => {self.registers.a = self.memory.read_byte(self.registers.de()); 2},
             0x7E => {self.registers.a = self.memory.read_byte(self.registers.hl()); 2},
-            0xFA => {self.registers.a = self.memory.read_byte(self.next_word()); 4},
+            0xFA => {let word = self.next_word(); self.registers.a = self.memory.read_byte(word); 4},
             0x3E => {self.registers.a = self.next_byte(); 2},
             //r1=b
             0x40 => {self.registers.b = self.registers.b; 1},
@@ -392,16 +381,16 @@ impl Cpu {
             0x73 => {self.memory.write_byte(self.registers.hl(), self.registers.e); 2},
             0x74 => {self.memory.write_byte(self.registers.hl(), self.registers.h); 2},
             0x75 => {self.memory.write_byte(self.registers.hl(), self.registers.l); 2},
-            0x36 => {self.memory.write_byte(self.registers.hl(), self.next_byte()); 3},
+            0x36 => {let byte = self.next_byte(); self.memory.write_byte(self.registers.hl(), byte); 3},
             //write value of a to memory
             0x02 => {self.memory.write_byte(self.registers.bc(), self.registers.a); 2},
             0x12 => {self.memory.write_byte(self.registers.de(), self.registers.a); 2},
             0x77 => {self.memory.write_byte(self.registers.hl(), self.registers.a); 2},
-            0xEA => {self.memory.write_byte(self.next_word(), self.registers.a); 4},
+            0xEA => {let word = self.next_word(); self.memory.write_byte(word, self.registers.a); 4},
             //LD A,(C)
-            0xF2 => {self.registers.a = self.memory.read_byte((0xFF00 + self.registers.c) as u16); 2},
+            0xF2 => {self.registers.a = self.memory.read_byte(0xFF00 + self.registers.c as u16); 2},
             //LD (C), A
-            0xE2 => {self.memory.write_byte((0xFF00 + self.registers.c) as u16, self.registers.a); 2},
+            0xE2 => {self.memory.write_byte(0xFF00 + self.registers.c as u16, self.registers.a); 2},
             //LD A,(HLD)
             0x3A => {self.registers.a = self.memory.read_byte(self.registers.hl()); self.registers.set_hl(self.registers.hl() - 1); 2},
             //LD (HLD), A
@@ -411,30 +400,30 @@ impl Cpu {
             //LD (HLI), A
             0x22 => {self.memory.write_byte(self.registers.hl(), self.registers.a); self.registers.set_hl(self.registers.hl() + 1); 2},
             //LDH (n), A
-            0xE0 => {self.memory.write_byte(0xFF00 + self.next_byte() as u16, self.registers.a); 3},
+            0xE0 => {let byte = self.next_byte(); self.memory.write_byte(0xFF00 + byte as u16, self.registers.a); 3},
             //LDH A, (n)
-            0xF0 => {self.registers.a = self.memory.read_byte(0xFF00 + self.next_byte() as u16); 3},
+            0xF0 => {let byte = self.next_byte(); self.registers.a = self.memory.read_byte(0xFF00 + byte as u16); 3},
 
             //16 bit loads
-            0x01 => {self.registers.set_bc(self.next_word()); 3},
-            0x11 => {self.registers.set_de(self.next_word()); 3},
-            0x21 => {self.registers.set_hl(self.next_word()); 3},
+            0x01 => {let word = self.next_word(); self.registers.set_bc(word); 3},
+            0x11 => {let word = self.next_word(); self.registers.set_de(word); 3},
+            0x21 => {let word = self.next_word(); self.registers.set_hl(word); 3},
             0x31 => {self.registers.sp = self.next_word(); 3},
             0xF9 => {self.registers.sp = self.registers.hl(); 2},
             //Check flags for this one
-            0xF8 => {self.registers.set_hl(self.registers.sp + self.next_byte() as u16); 3},
+            0xF8 => {let byte = self.next_byte(); self.registers.set_hl(self.registers.sp + byte as u16); 3},
             //
-            0x08 => {self.memory.write_word(self.next_word(), self.registers.sp); 5},
+            0x08 => {let word = self.next_word(); self.memory.write_word(word, self.registers.sp); 5},
             //PUSH nn
             0xF5 => {self.push_word(self.registers.af()); 4},
             0xC5 => {self.push_word(self.registers.bc()); 4},
             0xD5 => {self.push_word(self.registers.de()); 4},
             0xE5 => {self.push_word(self.registers.hl()); 4},
             //POP nn
-            0xF1 => {self.registers.set_af(self.pop_word()); 3},
-            0xC1 => {self.registers.set_bc(self.pop_word()); 3},
-            0xD1 => {self.registers.set_de(self.pop_word()); 3},
-            0xE1 => {self.registers.set_hl(self.pop_word()); 3},
+            0xF1 => {let word = self.pop_word(); self.registers.set_af(word); 3},
+            0xC1 => {let word = self.pop_word(); self.registers.set_bc(word); 3},
+            0xD1 => {let word = self.pop_word(); self.registers.set_de(word); 3},
+            0xE1 => {let word = self.pop_word(); self.registers.set_hl(word); 3},
 
             //8 bit ALU - add n to a
             0x87 => {self.add8(self.registers.a); 1},
@@ -445,7 +434,7 @@ impl Cpu {
             0x84 => {self.add8(self.registers.h); 1},
             0x85 => {self.add8(self.registers.l); 1},
             0x86 => {self.add8(self.memory.read_byte(self.registers.hl())); 2},
-            0xC6 => {self.add8(self.next_byte()); 2},
+            0xC6 => {let byte = self.next_byte(); self.add8(byte); 2},
             //8 bit add n + carry flag to A
             0x8F => {self.add8_carry(self.registers.a); 1},
             0x88 => {self.add8_carry(self.registers.b); 1},
@@ -455,7 +444,7 @@ impl Cpu {
             0x8C => {self.add8_carry(self.registers.h); 1},
             0x8D => {self.add8_carry(self.registers.l); 1},
             0x8E => {self.add8_carry(self.memory.read_byte(self.registers.hl())); 2},
-            0xCE => {self.add8_carry(self.next_byte()); 2},
+            0xCE => {let byte = self.next_byte(); self.add8_carry(byte); 2},
             //8 bit subtract n from A
             0x97 => {self.sub8(self.registers.a); 1},
             0x90 => {self.sub8(self.registers.b); 1},
@@ -465,7 +454,7 @@ impl Cpu {
             0x94 => {self.sub8(self.registers.h); 1},
             0x95 => {self.sub8(self.registers.l); 1},
             0x96 => {self.sub8(self.memory.read_byte(self.registers.hl())); 2},
-            0xD6 => {self.sub8(self.next_byte()); 2},
+            0xD6 => {let byte = self.next_byte(); self.sub8(byte); 2},
             //8 bit subtract n from A with carry
             0x9F => {self.sub8_carry(self.registers.a); 1},
             0x98 => {self.sub8_carry(self.registers.b); 1},
@@ -475,7 +464,7 @@ impl Cpu {
             0x9C => {self.sub8_carry(self.registers.h); 1},
             0x9D => {self.sub8_carry(self.registers.l); 1},
             0x9E => {self.sub8_carry(self.memory.read_byte(self.registers.hl())); 2},
-            0xDE => {self.sub8_carry(self.next_byte()); 2},
+            0xDE => {let byte = self.next_byte(); self.sub8_carry(byte); 2},
             //8 bit AND
             0xA7 => {self.and(self.registers.a); 1},
             0xA0 => {self.and(self.registers.b); 1},
@@ -485,7 +474,7 @@ impl Cpu {
             0xA4 => {self.and(self.registers.h); 1},
             0xA5 => {self.and(self.registers.l); 1},
             0xA6 => {self.and(self.memory.read_byte(self.registers.hl())); 2},
-            0xE6 => {self.and(self.next_byte()); 2},
+            0xE6 => {let byte = self.next_byte(); self.and(byte); 2},
             //8 bit OR
             0xB7 => {self.or(self.registers.a); 1},
             0xB0 => {self.or(self.registers.b); 1},
@@ -495,7 +484,7 @@ impl Cpu {
             0xB4 => {self.or(self.registers.h); 1},
             0xB5 => {self.or(self.registers.l); 1},
             0xB6 => {self.or(self.memory.read_byte(self.registers.hl())); 2},
-            0xF6 => {self.or(self.next_byte()); 2},
+            0xF6 => {let byte = self.next_byte(); self.or(byte); 2},
             //8 bit XOR
             0xAF => {self.xor(self.registers.b); 1},
             0xA8 => {self.xor(self.registers.a); 1},
@@ -505,7 +494,7 @@ impl Cpu {
             0xAC => {self.xor(self.registers.h); 1},
             0xAD => {self.xor(self.registers.l); 1},
             0xAE => {self.xor(self.memory.read_byte(self.registers.hl())); 2},
-            0xEE => {self.xor(self.next_byte()); 2},
+            0xEE => {let byte = self.next_byte(); self.xor(byte); 2},
             //8 bit compare n with a
             0xBF => {self.cmp(self.registers.b); 1},
             0xB8 => {self.cmp(self.registers.a); 1},
@@ -515,7 +504,7 @@ impl Cpu {
             0xBC => {self.cmp(self.registers.h); 1},
             0xBD => {self.cmp(self.registers.l); 1},
             0xBE => {self.cmp(self.memory.read_byte(self.registers.hl())); 2},
-            0xFE => {self.cmp(self.next_byte()); 2},
+            0xFE => {let byte = self.next_byte(); self.cmp(byte); 2},
             //INC register n
             0x3C => {self.registers.a = self.inc(self.registers.a); 1},
             0x04 => {self.registers.b = self.inc(self.registers.b); 1},
@@ -524,7 +513,7 @@ impl Cpu {
             0x1C => {self.registers.e = self.inc(self.registers.e); 1},
             0x24 => {self.registers.h = self.inc(self.registers.h); 1},
             0x2C => {self.registers.l = self.inc(self.registers.l); 1},
-            0x34 => {self.memory.write_byte(self.registers.hl(), self.inc(self.memory.read_byte(self.registers.hl()))); 3},
+            0x34 => {let inc = self.inc(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), inc); 3},
             //DEC register n
             0x3D => {self.registers.a = self.dec(self.registers.a); 1},
             0x05 => {self.registers.b = self.dec(self.registers.b); 1},
@@ -533,14 +522,14 @@ impl Cpu {
             0x1D => {self.registers.e = self.dec(self.registers.e); 1},
             0x25 => {self.registers.h = self.dec(self.registers.h); 1},
             0x2D => {self.registers.l = self.dec(self.registers.l); 1},
-            0x35 => {self.memory.write_byte(self.registers.hl(), self.dec(self.memory.read_byte(self.registers.hl()))); 3},
+            0x35 => {let dec = self.dec(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), dec); 3},
             //Add to HL
             0x09 => {self.add_hl(self.registers.bc()); 2},
             0x19 => {self.add_hl(self.registers.de()); 2},
             0x29 => {self.add_hl(self.registers.hl()); 2},
             0x39 => {self.add_hl(self.registers.sp); 2},
             //Add to SP
-            0xE8 => {self.add_sp(self.next_byte() as u16 ); 4},
+            0xE8 => {let byte = self.next_byte(); self.add_sp(byte as u16 ); 4},
             //INC register nn
             0x03 => {self.registers.set_bc(self.registers.bc()+1); 2},
             0x13 => {self.registers.set_de(self.registers.de()+1); 2},
@@ -623,7 +612,7 @@ impl Cpu {
             //RETI - pop two bytes and jump to address, enable interrupts
             0xD9 => {self.registers.pc = self.pop_word(); self.interrupts_enabled = true; 2},
             //CB
-            0xCB => {self.cb_decode(self.next_byte()); 1},
+            0xCB => {let byte = self.next_byte(); self.cb_decode(byte); 1},
             _ => {println!("This opcode has not been implemented!"); 1}
         };
 
@@ -864,7 +853,7 @@ impl Cpu {
             0x33 => {self.registers.e = self.swap(self.registers.e); 2},
             0x34 => {self.registers.h = self.swap(self.registers.h); 2},
             0x35 => {self.registers.l = self.swap(self.registers.l); 2},
-            0x36 => {let address = self.registers.hl(); self.memory.write_byte(address, self.swap(self.memory.read_byte(address))); 4},
+            0x36 => {let address = self.registers.hl(); let swapped = self.swap(self.memory.read_byte(address)); self.memory.write_byte(address, swapped); 4},
             //RLC n - rotate n left. old bit 7 to carry flag
             0x07 => {self.registers.a = self.rlc(self.registers.a); 2},
             0x00 => {self.registers.b = self.rlc(self.registers.b); 2},
@@ -873,7 +862,7 @@ impl Cpu {
             0x03 => {self.registers.e = self.rlc(self.registers.e); 2},
             0x04 => {self.registers.h = self.rlc(self.registers.h); 2},
             0x05 => {self.registers.l = self.rlc(self.registers.l); 2},
-            0x06 => {self.memory.write_byte(self.registers.hl(), self.rlc(self.memory.read_byte(self.registers.hl()))); 4},
+            0x06 => {let rlc = self.rlc(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), rlc); 4},
             //RL n - rotate n left through carry flag
             0x17 => {self.registers.a = self.rl(self.registers.a); 2},
             0x10 => {self.registers.b = self.rl(self.registers.b); 2},
@@ -882,7 +871,7 @@ impl Cpu {
             0x13 => {self.registers.e = self.rl(self.registers.e); 2},
             0x14 => {self.registers.h = self.rl(self.registers.h); 2},
             0x15 => {self.registers.l = self.rl(self.registers.l); 2},
-            0x16 => {self.memory.write_byte(self.registers.hl(), self.rl(self.memory.read_byte(self.registers.hl()))); 4},
+            0x16 => {let rl = self.rl(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), rl); 4},
             //RRC n - rotate n right, old bit 0 to carry flag
             0x0F => {self.registers.a = self.rrc(self.registers.a); 2},
             0x08 => {self.registers.b = self.rrc(self.registers.b); 2},
@@ -891,7 +880,7 @@ impl Cpu {
             0x0B => {self.registers.e = self.rrc(self.registers.e); 2},
             0x0C => {self.registers.h = self.rrc(self.registers.h); 2},
             0x0D => {self.registers.l = self.rrc(self.registers.l); 2},
-            0x0E => {self.memory.write_byte(self.registers.hl(), self.rrc(self.memory.read_byte(self.registers.hl()))); 4},
+            0x0E => {let rrc = self.rrc(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), rrc); 4},
             //RR n - rotate n right through carry flag
             0x1F => {self.registers.a = self.rr(self.registers.a); 2},
             0x18 => {self.registers.b = self.rr(self.registers.b); 2},
@@ -900,7 +889,7 @@ impl Cpu {
             0x1B => {self.registers.e = self.rr(self.registers.e); 2},
             0x1C => {self.registers.h = self.rr(self.registers.h); 2},
             0x1D => {self.registers.l = self.rr(self.registers.l); 2},
-            0x1E => {self.memory.write_byte(self.registers.hl(), self.rr(self.memory.read_byte(self.registers.hl()))); 4},
+            0x1E => {let rr = self.rr(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), rr); 4},
             //SLA n - shift n left into carry flag, LSB=0
             0x27 => {self.registers.a = self.sla(self.registers.a); 2},
             0x20 => {self.registers.b = self.sla(self.registers.b); 2},
@@ -909,7 +898,7 @@ impl Cpu {
             0x23 => {self.registers.e = self.sla(self.registers.e); 2},
             0x24 => {self.registers.h = self.sla(self.registers.h); 2},
             0x25 => {self.registers.l = self.sla(self.registers.l); 2},
-            0x26 => {self.memory.write_byte(self.registers.hl(), self.sla(self.memory.read_byte(self.registers.hl()))); 4},
+            0x26 => {let sla = self.sla(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), sla); 4},
             //SRA n - shift n right into carry flag. MSB doesn't change
             0x2F => {self.registers.a = self.sra(self.registers.a); 2},
             0x28 => {self.registers.b = self.sra(self.registers.b); 2},
@@ -918,7 +907,7 @@ impl Cpu {
             0x2B => {self.registers.e = self.sra(self.registers.e); 2},
             0x2C => {self.registers.h = self.sra(self.registers.h); 2},
             0x2D => {self.registers.l = self.sra(self.registers.l); 2},
-            0x2E => {self.memory.write_byte(self.registers.hl(), self.sra(self.memory.read_byte(self.registers.hl()))); 4},
+            0x2E => {let sra = self.sra(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), sra); 4},
             //SRA n - shift n right into carry flag. MSB=0
             0x3F => {self.registers.a = self.srl(self.registers.a); 2},
             0x38 => {self.registers.b = self.srl(self.registers.b); 2},
@@ -927,7 +916,7 @@ impl Cpu {
             0x3B => {self.registers.e = self.srl(self.registers.e); 2},
             0x3C => {self.registers.h = self.srl(self.registers.h); 2},
             0x3D => {self.registers.l = self.srl(self.registers.l); 2},
-            0x3E => {self.memory.write_byte(self.registers.hl(), self.srl(self.memory.read_byte(self.registers.hl()))); 4},
+            0x3E => {let srl = self.srl(self.memory.read_byte(self.registers.hl())); self.memory.write_byte(self.registers.hl(), srl); 4},
             //Test bit 0
             0x40 => {self.check_bit(self.registers.b, 0); 2},
             0x41 => {self.check_bit(self.registers.c, 0); 2},
