@@ -9,6 +9,8 @@ pub struct Cpu {
     pub interrupts_enabled: bool,
 }
 
+//CHECK WRAPPING
+
 pub enum RegisterTarget {
     A,
     B,
@@ -60,28 +62,126 @@ impl Cpu {
         self.memory.read_word(self.registers.sp)
     }
 
+    //Add 8 bit value to register a, set appropriate flags
     fn add8(&mut self, data: u8) {
+        if ((data & 0xF) + (data & 0xF)) & 0x10 == 0x10 {
+            self.registers.set_halfcarry(1);
+        }
+        else {
+            self.registers.set_halfcarry(0);
+        }
+        if data as u16 + self.registers.a as u16 > 0xFF {
+            self.registers.set_carry(1);
+        }
+        else {
+            self.registers.set_carry(0);
+        }
         self.registers.a += data;
-        //Figure out how to set flags properly
+        if self.registers.a == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_addsub(0);
     }
 
+    //Add 8 bit value + carry, set appropriate values
     fn add8_carry(&mut self, data: u8) {
-        //Implement
+        if self.registers.check_carry() {
+            if self.registers.a < data {
+                self.registers.a += 1;
+            }
+            else {
+                data += 1;
+            }
+        }
+        if ((data & 0xF) + (data & 0xF)) & 0x10 == 0x10 {
+            self.registers.set_halfcarry(1);
+        }
+        else {
+            self.registers.set_halfcarry(0);
+        }
+        if data as u16 + self.registers.a as u16 > 0xFF {
+            self.registers.set_carry(1);
+        }
+        else {
+            self.registers.set_carry(0);
+        }
+        self.registers.a += data;
+        if self.registers.a == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_addsub(0);
     }
 
+    //Sub 8 bit value from register a, set appropriate flags
     fn sub8(&mut self, data: u8) {
-        //Implement
+        if data & 0xF > self.registers.a & 0xF {
+            self.registers.set_halfcarry(1);
+        }
+        else {
+            self.registers.set_halfcarry(0);
+        }
+        if data & 0xFF > self.registers.a & 0xFF {
+            self.registers.set_carry(1);
+        }
+        else {
+            self.registers.set_carry(0);
+        }
+        self.registers.a -= data;
+        if self.registers.a == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_addsub(1);
     }
 
+    //Sub 8 bit value and carry, set appropriate flags
     fn sub8_carry(&mut self, data: u8) {
-        //Implement
+        if self.registers.check_carry() {
+            if self.registers.a > data {
+                self.registers.a -= 1;
+            }
+            else {
+                data -= 1;
+            }
+        }
+        if data & 0xF > self.registers.a & 0xF {
+            self.registers.set_halfcarry(1);
+        }
+        else {
+            self.registers.set_halfcarry(0);
+        }
+        if data & 0xFF > self.registers.a & 0xFF {
+            self.registers.set_carry(1);
+        }
+        else {
+            self.registers.set_carry(0);
+        }
+        self.registers.a -= data;
+        if self.registers.a == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_addsub(1);
     }
 
-    //double check flags for this one
+    //Bitwise AND with register a, store value in a
     fn and(&mut self, data: u8) {
         self.registers.a &= data;
         if self.registers.a == 0 {
             self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0)
         }
         self.registers.set_addsub(0);
         self.registers.set_carry(0);
@@ -89,22 +189,28 @@ impl Cpu {
         
     }
 
-    //double check flags for this one
+    //Bitwise OR with register a, store value in a
     fn or(&mut self, data: u8) {
         self.registers.a |= data;
         if self.registers.a == 0 {
             self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
         }
         self.registers.set_addsub(0);
         self.registers.set_halfcarry(0);
         self.registers.set_carry(0);
     }
 
-    //double check flags for this one
+    //Bitwise XOR with register a, store value in a
     fn xor(&mut self, data: u8) {
         self.registers.a ^= data;
         if self.registers.a == 0 {
             self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0)
         }
         self.registers.set_addsub(0);
         self.registers.set_halfcarry(0);
@@ -121,20 +227,48 @@ impl Cpu {
         }
     }
 
-    fn inc(&mut self, data: u8) {
-        //Implement
+    //INC, check for zero and half-carry flag
+    fn inc(&mut self, data: u8) -> u8 {
+        if((data & 0xF) + (1u8 & 0xF)) & 0x10 == 0x10 {
+            self.registers.set_halfcarry(1);
+        }
+        else {
+            self.registers.set_halfcarry(0);
+        }
+        data += 1;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_addsub(0);
+        data
     }
 
     fn inc16(&mut self, data: u16) {
-
     }
 
     fn dec16(&mut self, data: u16) {
 
     }
 
-    fn dec(&mut self, data: u8) {
-        //Implement
+    fn dec(&mut self, data: u8) -> u8 {
+        if data & 0xF == 0 {
+            self.registers.set_halfcarry(1);
+        }
+        else {
+            self.registers.set_halfcarry(0);
+        }
+        data -= 1;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_addsub(1);
+        data
     }
 
     fn add_hl(&mut self, data: u16) {
@@ -340,7 +474,7 @@ impl Cpu {
             0xB5 => {self.or(self.registers.l); 1},
             0xB6 => {self.or(self.memory.read_byte(self.registers.get_hl())); 2},
             0xF6 => {self.or(self.next_byte()); 2},
-            //8 bit subtract n from A with carry
+            //8 bit XOR
             0xAF => {self.xor(self.registers.b); 1},
             0xA8 => {self.xor(self.registers.a); 1},
             0xA9 => {self.xor(self.registers.c); 1},
@@ -361,23 +495,23 @@ impl Cpu {
             0xBE => {self.cmp(self.memory.read_byte(self.registers.get_hl())); 2},
             0xFE => {self.cmp(self.next_byte()); 2},
             //INC register n
-            0x3C => {self.registers.a += 1; 1},
-            0x04 => {self.registers.b += 1; 1},
-            0x0C => {self.registers.c += 1; 1},
-            0x14 => {self.registers.d += 1; 1},
-            0x1C => {self.registers.e += 1; 1},
-            0x24 => {self.registers.h += 1; 1},
-            0x2C => {self.registers.l += 1; 1},
-            0x34 => {self.memory.inc_memory_byte(self.registers.get_hl()); 3},
+            0x3C => {self.registers.a = self.inc(self.registers.a); 1},
+            0x04 => {self.registers.b = self.inc(self.registers.b); 1},
+            0x0C => {self.registers.c = self.inc(self.registers.c); 1},
+            0x14 => {self.registers.d = self.inc(self.registers.d); 1},
+            0x1C => {self.registers.e = self.inc(self.registers.e); 1},
+            0x24 => {self.registers.h = self.inc(self.registers.h); 1},
+            0x2C => {self.registers.l = self.inc(self.registers.l); 1},
+            0x34 => {self.memory.write_byte(self.registers.get_hl(), self.inc(self.memory.read_byte(self.registers.get_hl()))); 3},
             //DEC register n
-            0x3D => {self.registers.a -= 1; 1},
-            0x05 => {self.registers.b -= 1; 1},
-            0x0D => {self.registers.c -= 1; 1},
-            0x15 => {self.registers.d -= 1; 1},
-            0x1D => {self.registers.e -= 1; 1},
-            0x25 => {self.registers.h -= 1; 1},
-            0x2D => {self.registers.l -= 1; 1},
-            0x35 => {self.memory.dec_memory_byte(self.registers.get_hl()); 3},
+            0x3D => {self.registers.a = self.dec(self.registers.a); 1},
+            0x05 => {self.registers.b = self.dec(self.registers.b); 1},
+            0x0D => {self.registers.c = self.dec(self.registers.c); 1},
+            0x15 => {self.registers.d = self.dec(self.registers.d); 1},
+            0x1D => {self.registers.e = self.dec(self.registers.e); 1},
+            0x25 => {self.registers.h = self.dec(self.registers.h); 1},
+            0x2D => {self.registers.l = self.dec(self.registers.l); 1},
+            0x35 => {self.memory.write_byte(self.registers.get_hl(), self.dec(self.memory.read_byte(self.registers.get_hl()))); 3},
             //Add to HL
             0x09 => {self.add_hl(self.registers.get_bc()); 2},
             0x19 => {self.add_hl(self.registers.get_de()); 2},
@@ -386,13 +520,11 @@ impl Cpu {
             //Add to SP
             0xE8 => {self.add_sp(self.next_byte() as u16 ); 4},
             //INC register nn
-            //CHECK FLAGS FOR THESE
             0x03 => {self.registers.set_bc(self.registers.get_bc()+1); 2},
             0x13 => {self.registers.set_de(self.registers.get_de()+1); 2},
             0x23 => {self.registers.set_hl(self.registers.get_hl()+1); 2},
             0x33 => {self.registers.sp += 1; 2},
             //DEC register nn
-            //CHECK FLAGS FOR THESE
             0x0B => {self.registers.set_bc(self.registers.get_bc()-1); 2},
             0x1B => {self.registers.set_de(self.registers.get_de()-1); 2},
             0x2B => {self.registers.set_hl(self.registers.get_hl()-1); 2},

@@ -42,14 +42,6 @@ impl Memory {
         self.memory[address as usize] = data;
     }
 
-    pub fn inc_memory_byte(&mut self, address: u16) {
-        self.memory[address as usize] += 1;
-    }
-
-    pub fn dec_memory_byte(&mut self, address: u16) {
-        self.memory[address as usize] -= 1;
-    }
-
     //Check endianess, I think this one is good though
     pub fn write_word(&mut self, address: u16, data: u16) {
         let upper: u8 = ((data & 0xFF00) >> 8) as u8;
