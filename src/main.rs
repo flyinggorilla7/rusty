@@ -1,3 +1,4 @@
+extern crate sdl2;
 mod cpu;
 mod register;
 mod memory;
@@ -5,7 +6,8 @@ mod memory;
 
 
 fn main() {
-    println!("Hello, world!");
+
+    let _sdl = sdl2::init().unwrap();
 
     let mut cpu = cpu::Cpu::new();
 

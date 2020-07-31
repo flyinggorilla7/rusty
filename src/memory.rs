@@ -31,9 +31,11 @@ impl Memory {
             let data = *instruction as u8;
             buffer[index] = data;
             //Print Instructions for Debug Purposes
+            /*
             if index < 100 {
                 println!("{}    {:#x}", index, data);
             }
+            */
 
         }
         Memory {
