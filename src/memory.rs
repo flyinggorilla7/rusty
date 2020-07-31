@@ -1,3 +1,6 @@
+use std::fs;
+use std::path::Path;
+
 pub struct Memory {
     //Rom bank 0 -> 0000-3FFF
     //Rom bank 1 -> 4000-7FFF
@@ -19,6 +22,20 @@ pub struct Memory {
 
 impl Memory {
     pub fn new() -> Memory {
+        let path = Path::new("/home/porkchop/programming/rust/rustyroms/drmario.gb");
+        let file = fs::read(path).unwrap();
+        println!("File Length {}", file.len());
+        let mut buffer: [u8; 0xFFFF] = [0; 0xFFFF];
+        
+        for (index,instruction) in file.iter().enumerate() {
+            let data = *instruction as u8;
+            buffer[index] = data;
+            //Print Instructions for Debug Purposes
+            if index < 100 {
+                println!("{}    {:#x}", index, data);
+            }
+
+        }
         Memory {
             rom: [1u8; 0x7FFF],
             vram: [1u8; 0x1FFF],

@@ -292,7 +292,7 @@ impl Cpu {
 
 
 
-    pub fn cycle(&mut self) {
+    pub fn cycle(&mut self) -> u8 {
 
         let opcode = self.next_byte();
 
@@ -541,7 +541,7 @@ impl Cpu {
             0x2B => {self.registers.set_hl(self.registers.hl()-1); 2},
             0x3B => {self.registers.sp -= 1; 2},
             //Decimal adjust register A
-            0x27 => {1}, //Implement
+            0x27 => {self.registers.check_halfcarry(); self.registers.check_addsub(); 1}, //Implement
             //CPL Register A
             0x2F => {self.cpl(); 1},
             //CCF
@@ -612,10 +612,11 @@ impl Cpu {
             //RETI - pop two bytes and jump to address, enable interrupts
             0xD9 => {self.registers.pc = self.pop_word(); self.interrupts_enabled = true; 2},
             //CB
-            0xCB => {let byte = self.next_byte(); self.cb_decode(byte); 1},
+            //CHECK CYCLES FOR THIS ONE
+            0xCB => {let byte = self.next_byte(); self.cb_decode(byte) + 1},
             _ => {println!("This opcode has not been implemented!"); 1}
         };
-
+        cycles
     }
 
     fn rrca(&mut self) {
@@ -843,7 +844,7 @@ impl Cpu {
     }
 
 
-    fn cb_decode(&mut self, opcode: u8) {
+    fn cb_decode(&mut self, opcode: u8) -> u8 {
         let cycles = match opcode{
             //SWAP upper and lower nibbles of n
             0x37 => {self.registers.a = self.swap(self.registers.a); 2},
@@ -1133,10 +1134,8 @@ impl Cpu {
             0xFD => {self.registers.l |= 1u8 << 7; 2},
             0xFE => {self.memory.write_byte(self.registers.hl(), self.memory.read_byte(self.registers.hl()) | (1u8 << 7)); 4},
             0xFF => {self.registers.a |= 1u8 << 7; 2},
-
-
         };
-
+        cycles
     }
 
     //check if bit is zero
