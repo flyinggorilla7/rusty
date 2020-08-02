@@ -47,7 +47,7 @@ impl Memory {
 
 
     pub fn read_byte(&self, address: u16) -> u8 {
-        if address < 0x8000 {
+        if (address < 0x8000) || (address > 0x9FFF) {
             self.memory[address as usize]
         }
         else {
@@ -57,20 +57,20 @@ impl Memory {
 
     //CHECK ENDIANESS, edit... might be ok now
     pub fn read_word(&self, address: u16) -> u16 {
-        if address < 0x8000 {
+        if (address < 0x8000) || (address > 0x9FFF) {
             let lower: u8 = self.memory[address as usize];
             let upper: u8 = self.memory[(address+1) as usize];
             ((upper as u16) << 8) | (lower as u16)
         }
         else {
             let lower: u8 = self.vram.read_byte(address);
-            let upper: u8 = self.vram.read_byte(address);
+            let upper: u8 = self.vram.read_byte(address+1);
             ((upper as u16) << 8) | (lower as u16)
         } 
     }
 
     pub fn write_byte(&mut self, address: u16, data: u8) {
-        if address < 0x8000 {
+        if (address < 0x8000) || (address > 0x9FFF) {
             self.memory[address as usize] = data;
         }
         else {
@@ -82,8 +82,15 @@ impl Memory {
     pub fn write_word(&mut self, address: u16, data: u16) {
         let upper: u8 = ((data & 0xFF00) >> 8) as u8;
         let lower: u8 = (data & 0x00FF) as u8;
-        self.memory[address as usize] = lower;
-        self.memory[(address+1) as usize] = upper;
+        if (address < 0x8000) || (address > 0x9FFF) {
+            self.memory[address as usize] = lower;
+            self.memory[(address+1) as usize] = upper;
+        }
+        else {
+            self.vram.write_byte(address, lower);
+            self.vram.write_byte(address, upper);
+        }
+
     }
 
     //0xFF40 - Bit 7
@@ -126,20 +133,18 @@ impl Memory {
         self.memory[0xFF40] & (1u8 << 0) != 0
     }
 
-    //Specifies position in BG pixels map to display 
-    //at upper left
+    //Specifies position in BG pixels map to display at upper left
     fn scrolly(&self) -> u8 {
         self.memory[0xFF42]
     }
-
     fn scrollx(&self) -> u8 {
         self.memory[0xFF43]
     }
 
+    //Specifies position in Windows map to display at upper left
     fn  windowy(&self) -> u8 {
         self.memory[0xFF4A]
     }
-
     fn windowx(&self) -> u8 {
         self.memory[0xFF4B]
     }

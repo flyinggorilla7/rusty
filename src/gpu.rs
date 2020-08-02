@@ -73,8 +73,11 @@ impl Vram {
         };
     }
 
-    pub fn read_byte(&self, address: u16) -> u8 {
-        self.vram[(address - VRAM_START) as usize]
+    pub fn read_byte(&self, mut address: u16) -> u8 {
+        if address > VRAM_START {
+            address -= VRAM_START;
+        }
+        self.vram[address as usize]
     }
 
     pub fn write_byte(&mut self, address: u16, data: u8) {
@@ -167,13 +170,9 @@ mod tests {
     fn test_update_tile() {
         let mut vram = Vram::new();
         vram.write_byte(0x8000, 0xFF);
-        //println!("{:#b}", vram.vram[0x0000]);
-        //println!("{:#b}", vram.vram[0x0001]);
         vram.write_byte(0x801E, 0xFF);
         vram.write_byte(0x801F, 0xFF);
-        //println!("{:?}", vram.tile_set[0][0]);
         assert_eq!(vram.tile_set[0][0][0], PixelColor::Dark);
-        //println!("tile_set {:?}", vram.tile_set[0][1]);
         assert_eq!(vram.tile_set[1][7], [PixelColor::Darkest, PixelColor::Darkest, PixelColor::Darkest, PixelColor::Darkest,
             PixelColor::Darkest,PixelColor::Darkest,PixelColor::Darkest,PixelColor::Darkest]);
             
