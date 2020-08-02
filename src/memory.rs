@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
+use crate::gpu::Vram;
 
-pub struct Memory {
     //Rom bank 0 -> 0000-3FFF
     //Rom bank 1 -> 4000-7FFF
     //VRAM -> 8000-9FFF
@@ -14,10 +14,10 @@ pub struct Memory {
     //IO Ports -> FF00-FF7F
     //High RAM -> FF80-FFFE
     //Interrupt Enable Register -> FFFF
-    pub rom: [u8; 0x7FFF],
-    pub vram: [u8; 0x1FFF],
+pub struct Memory {
+    pub rom: [u8; 0x8000],
+    pub vram: Vram,
     pub memory: [u8; 0xFFFF],
-
 }
 
 impl Memory {
@@ -39,26 +39,43 @@ impl Memory {
 
         }
         Memory {
-            rom: [1u8; 0x7FFF],
-            vram: [1u8; 0x1FFF],
+            rom: [1u8; 0x8000],
+            vram: Vram::new(),
             memory: [1u8; 0xFFFF],
         }
     }
 
 
     pub fn read_byte(&self, address: u16) -> u8 {
-        self.memory[address as usize]
+        if address < 0x8000 {
+            self.memory[address as usize]
+        }
+        else {
+            self.vram.read_byte(address)
+        }
     }
 
     //CHECK ENDIANESS, edit... might be ok now
     pub fn read_word(&self, address: u16) -> u16 {
-        let lower: u8 = self.memory[address as usize];
-        let upper: u8 = self.memory[(address+1) as usize];
-        ((upper as u16) << 8) | (lower as u16) 
+        if address < 0x8000 {
+            let lower: u8 = self.memory[address as usize];
+            let upper: u8 = self.memory[(address+1) as usize];
+            ((upper as u16) << 8) | (lower as u16)
+        }
+        else {
+            let lower: u8 = self.vram.read_byte(address);
+            let upper: u8 = self.vram.read_byte(address);
+            ((upper as u16) << 8) | (lower as u16)
+        } 
     }
 
     pub fn write_byte(&mut self, address: u16, data: u8) {
-        self.memory[address as usize] = data;
+        if address < 0x8000 {
+            self.memory[address as usize] = data;
+        }
+        else {
+            self.vram.write_byte(address, data)
+        }
     }
 
     //Check endianess, I think this one is good though
@@ -68,4 +85,92 @@ impl Memory {
         self.memory[address as usize] = lower;
         self.memory[(address+1) as usize] = upper;
     }
+
+    //0xFF40 - Bit 7
+    fn lcd_display_enable(&self) -> bool {
+        self.memory[0xFF40] & (1u8 << 7) != 0
+    }
+
+    //0xFF40 - Bit 6: false -> 9800, true -> 9C00
+    fn window_tile_display(&self) -> bool {
+        self.memory[0xFF40] & (1u8 << 6) != 0
+    }
+
+    //0xFF40 Bit 5: false -> window display disabled
+    fn window_display_enable(&self) -> bool {
+        self.memory[0xFF40] & (1u8 << 5) != 0
+    }
+
+    //0xFF40 Bit 4: false -> 8800-97FF selected
+    fn tile_data_select(&self) -> bool {
+        self.memory[0xFF40] & (1u8 << 4) != 0
+    }
+
+    //0xFF40 Bit 3: false -> 9800 - 9BFF
+    fn bg_tile_display(&self) -> bool {
+        self.memory[0xFF40] & (1u8 << 3) != 0
+    }
+
+    //0xFF40 Bit 2: false -> 8x8 sprites
+    fn sprite_size(&self) -> bool {
+        self.memory[0xFF40] & (1u8 << 2) != 0
+    }
+
+    //0xFF40 Bit 1: false -> sprite disabled
+    fn sprite_enable(&self) -> bool {
+        self.memory[0xFF40] & (1u8 << 1) != 0
+    }
+
+    //0xFF40 Bit 0: false -> BG display disabled
+    fn bg_display_enable(&self) -> bool {
+        self.memory[0xFF40] & (1u8 << 0) != 0
+    }
+
+    //Specifies position in BG pixels map to display 
+    //at upper left
+    fn scrolly(&self) -> u8 {
+        self.memory[0xFF42]
+    }
+
+    fn scrollx(&self) -> u8 {
+        self.memory[0xFF43]
+    }
+
+    fn  windowy(&self) -> u8 {
+        self.memory[0xFF4A]
+    }
+
+    fn windowx(&self) -> u8 {
+        self.memory[0xFF4B]
+    }
+
+
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lcd_display_enable() {
+        let mut memory = Memory::new();
+        memory.write_byte(0xFF40, 0xFF);
+        assert_eq!(memory.lcd_display_enable(), true);
+        memory.write_byte(0xFF40, 0x00);
+        assert_eq!(memory.lcd_display_enable(), false);
+    }
+    
+    #[test]
+    fn test_window_tile_map_display() {
+        let mut memory = Memory::new();
+        memory.write_byte(0xFF40, 0xFF);
+        assert_eq!(memory.window_tile_display(), true);
+        memory.write_byte(0xFF40, 0x00);
+        assert_eq!(memory.window_tile_display(), false);
+    }
+
+
+
+
 }
