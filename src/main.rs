@@ -40,7 +40,7 @@ pub fn emulate() {
         .expect("could not make into a canvas");
     let texture_creator = canvas.texture_creator();
     let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, 400, 300)
+        .create_texture_streaming(PixelFormatEnum::RGB24, 256, 256)
         .expect("Failed to create texture target.");
     texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
         for y in 0..256 {
@@ -57,6 +57,8 @@ pub fn emulate() {
     canvas.clear();
     canvas.copy(&texture, None, Rect::new(0,0,256,256)).unwrap();
 
+    println!("Texture Query: {:?}", texture.query());
+
     canvas.present();
     let mut event_pump = sdl.event_pump().unwrap();
     //256 pixels * 256 pixels * 3 RGB values for each pixel
@@ -68,7 +70,7 @@ pub fn emulate() {
         //cycle_count += cpu.cycle();
 
         //Tile map and Tile set update automatically when they are written to
-        //Pixel Buffer needs to be updated
+        //Pixel Buffer also needs to be updated
         let mut index: u32 = 0;
         for tile in cpu.memory.vram.tile_map1.iter() {
             for row in tile {
@@ -101,14 +103,13 @@ pub fn emulate() {
 
         }
 
-        println!("Count: {}", index);
-        
-        
-
-        
         //Update screen
-        let scrollx = cpu.memory.scrollx();
-        let scrolly = cpu.memory.scrolly();
+        let scrollx = cpu.memory.scrollx() as i32;
+        let scrolly = cpu.memory.scrolly() as i32;
+
+        //Pitch is 256 Pixels * 3 bytes per Pixel
+        texture.update(None, &pixel_buffer, 256 * 3).expect("Failed to update texture.");
+        canvas.copy(&texture, None, Rect::new(scrollx, scrolly,160,144)).unwrap();
 
         for event in event_pump.poll_iter() {
             match event {
