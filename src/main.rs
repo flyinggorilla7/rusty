@@ -27,7 +27,7 @@ fn main() {
 
 pub fn emulate() {
     let mut cpu = cpu::Cpu::new();
-    let mut cycle_count = 0;    
+    let mut cycle_count: u32 = 0;    
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
     //1200 is width
@@ -65,49 +65,52 @@ pub fn emulate() {
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
 
-        cycle_count += cpu.cycle();
+        cycle_count += cpu.cycle() as u32;
 
         //Tile map and Tile set update automatically when they are written to
         //Pixel Buffer also needs to be updated
         let mut index: u32 = 0;
-        for tile in cpu.memory.vram.tile_map1.iter() {
-            for row in tile {
-                for pixel in row {
-                    match pixel {
-                        gpu::PixelColor::Lightest => {
-                            pixel_buffer[index as usize] = 0xFF;
-                            pixel_buffer[(index+1) as usize] = 0xFF;
-                            pixel_buffer[(index+2) as usize] = 0xFF;
-                        }
-                        gpu::PixelColor::Light => {
-                            pixel_buffer[index as usize] = 0xB3;
-                            pixel_buffer[(index+1) as usize] = 0xB3;
-                            pixel_buffer[(index+2) as usize] = 0xB3;
-                        }
-                        gpu::PixelColor::Dark => {
-                            pixel_buffer[index as usize] = 0x4D;
-                            pixel_buffer[(index+1) as usize] = 0x4D;
-                            pixel_buffer[(index+2) as usize] = 0x4D;
-                        }
-                        gpu::PixelColor::Darkest => {
-                            pixel_buffer[index as usize] = 0x00;
-                            pixel_buffer[(index + 1) as usize] = 0x00;
-                            pixel_buffer[(index + 2) as usize] = 0x00;
-                        }
-                    };
-                    index += 3;
+        if cycle_count > 16000 {
+            for tile in cpu.memory.vram.tile_map1.iter() {
+                for row in tile {
+                    for pixel in row {
+                        match pixel {
+
+                            gpu::PixelColor::Lightest => {
+                                pixel_buffer[index as usize] = 0xFF;
+                                pixel_buffer[(index+1) as usize] = 0xFF;
+                                pixel_buffer[(index+2) as usize] = 0xFF;
+                            }
+                            gpu::PixelColor::Light => {
+                                pixel_buffer[index as usize] = 0xB3;
+                                pixel_buffer[(index+1) as usize] = 0xB3;
+                                pixel_buffer[(index+2) as usize] = 0xB3;
+                            }
+                            gpu::PixelColor::Dark => {
+                                pixel_buffer[index as usize] = 0x4D;
+                                pixel_buffer[(index+1) as usize] = 0x4D;
+                                pixel_buffer[(index+2) as usize] = 0x4D;
+                            }
+                            gpu::PixelColor::Darkest => {
+                                pixel_buffer[index as usize] = 0x00;
+                                pixel_buffer[(index + 1) as usize] = 0x00;
+                                pixel_buffer[(index + 2) as usize] = 0x00;
+                            }
+                        };
+                        index += 3;
+                    }
                 }
+
             }
+            //Update screen
+            let scrollx = cpu.memory.scrollx() as i32;
+            let scrolly = cpu.memory.scrolly() as i32;
 
+            //Pitch is 256 Pixels * 3 bytes per Pixel
+            texture.update(None, &pixel_buffer, 256 * 3).expect("Failed to update texture.");
+            canvas.copy(&texture, None, Rect::new(scrollx, scrolly,160,144)).unwrap();
+            cycle_count = 0;
         }
-
-        //Update screen
-        let scrollx = cpu.memory.scrollx() as i32;
-        let scrolly = cpu.memory.scrolly() as i32;
-
-        //Pitch is 256 Pixels * 3 bytes per Pixel
-        texture.update(None, &pixel_buffer, 256 * 3).expect("Failed to update texture.");
-        canvas.copy(&texture, None, Rect::new(scrollx, scrolly,160,144)).unwrap();
 
         for event in event_pump.poll_iter() {
             match event {

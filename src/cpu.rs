@@ -1,6 +1,5 @@
 use crate::register::Registers;
 use crate::memory::Memory;
-use std::num::Wrapping;
 
 pub struct Cpu {
     pub registers: Registers,
@@ -68,7 +67,7 @@ impl Cpu {
         else {
             self.registers.set_carry(0);
         }
-        self.registers.a += data;
+        self.registers.a = self.registers.a.wrapping_add(data);
         if self.registers.a == 0 {
             self.registers.set_zero(1);
         }
@@ -270,7 +269,7 @@ impl Cpu {
         else {
             self.registers.set_carry(0);
         }
-        self.registers.set_hl(self.registers.hl() + data);
+        self.registers.set_hl(self.registers.hl().wrapping_add(data));
         self.registers.set_addsub(0);
     }
     
