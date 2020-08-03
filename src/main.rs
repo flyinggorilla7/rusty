@@ -1,38 +1,115 @@
 extern crate sdl2;
 
+//With sdl, textures are image data for gpu, surfaces are image data for cpu
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::render::{Canvas, CanvasBuilder};
 use std::time::Duration;
+use sdl2::surface::Surface;
 use sdl2::rect::{Point, Rect};
+use std::env;
 
 mod cpu;
 mod register;
 mod memory;
 mod gpu;
+mod emulator;
 
 
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    println!("Args: {:?}", args);
 
+    emulate();
+}
+
+pub fn emulate() {
+    let mut cpu = cpu::Cpu::new();
+    let mut cycle_count = 0;    
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
-    let window = video.window("Game", 800, 600)
+    //1200 is width
+    //600 is height
+    let window = video.window("Game", 160, 144)
         .position_centered()
         .build()
         .unwrap();
     let mut canvas = window.into_canvas().build()
         .expect("could not make into a canvas");
-    let creator = canvas.texture_creator();
-    let mut texture = creator.create_texture_target(PixelFormatEnum::RGBA8888, 400, 300)
+    let texture_creator = canvas.texture_creator();
+    let mut texture = texture_creator
+        .create_texture_streaming(PixelFormatEnum::RGB24, 400, 300)
         .expect("Failed to create texture target.");
-    canvas.set_draw_color(Color::RGB(255,255,255));
-    canvas.clear();
-    canvas.present();
+    texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
+        for y in 0..256 {
+            for x in 0..256 {
+                let offset = y*pitch + x*3;
+                //0x92
+                buffer[offset] = 0xFF;
+                buffer[offset+1] = 0x55;
+                buffer[offset+2] = 0x83;
+            }
+        }
+    }).expect("Unable to modify texture pixel data.");
 
+    canvas.clear();
+    canvas.copy(&texture, None, Rect::new(0,0,256,256)).unwrap();
+
+    canvas.present();
     let mut event_pump = sdl.event_pump().unwrap();
+    //256 pixels * 256 pixels * 3 RGB values for each pixel
+    let mut pixel_buffer: [u8; 256*256*3] = [0; 256*256*3];
+
+    //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
+
+        //cycle_count += cpu.cycle();
+
+        //Tile map and Tile set update automatically when they are written to
+        //Pixel Buffer needs to be updated
+        let mut index: u32 = 0;
+        for tile in cpu.memory.vram.tile_map1.iter() {
+            for row in tile {
+                for pixel in row {
+                    match pixel {
+                        gpu::PixelColor::Lightest => {
+                            pixel_buffer[index as usize] = 0xFF;
+                            pixel_buffer[(index+1) as usize] = 0xFF;
+                            pixel_buffer[(index+2) as usize] = 0xFF;
+                        }
+                        gpu::PixelColor::Light => {
+                            pixel_buffer[index as usize] = 0xB3;
+                            pixel_buffer[(index+1) as usize] = 0xB3;
+                            pixel_buffer[(index+2) as usize] = 0xB3;
+                        }
+                        gpu::PixelColor::Dark => {
+                            pixel_buffer[index as usize] = 0x4D;
+                            pixel_buffer[(index+1) as usize] = 0x4D;
+                            pixel_buffer[(index+2) as usize] = 0x4D;
+                        }
+                        gpu::PixelColor::Darkest => {
+                            pixel_buffer[index as usize] = 0x00;
+                            pixel_buffer[(index + 1) as usize] = 0x00;
+                            pixel_buffer[(index + 2) as usize] = 0x00;
+                        }
+                    };
+                    index += 3;
+                }
+            }
+
+        }
+
+        println!("Count: {}", index);
+        
+        
+
+        
+        //Update screen
+        let scrollx = cpu.memory.scrollx();
+        let scrolly = cpu.memory.scrolly();
+
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} |
@@ -43,21 +120,7 @@ fn main() {
             }
         }
 
-        canvas.with_texture_canvas(&mut texture, |texture_canvas| {
-            texture_canvas.clear();
-            texture_canvas.set_draw_color(Color::RGBA(50,50,50,255));
-            texture_canvas.fill_rect(Rect::new(0, 0, 400, 300)).expect("could not fill rect");
-            //texture_canvas.draw_point(Point::new(400, 300))
-              //  .expect("error drawing point");
-        }).expect("Failed to draw point.");
-
-        canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        canvas.present();
     }
-    
-    let mut cpu = cpu::Cpu::new();
-
-    cpu.cycle();
-
-    println!("Yummy {}", cpu.registers.sp);
 }

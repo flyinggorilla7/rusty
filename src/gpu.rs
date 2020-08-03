@@ -38,8 +38,8 @@ type TileSet = [Tile; 384];
 
 pub struct Vram {
     tile_set: TileSet, 
-    tile_map1: [Tile; 1024],
-    tile_map2: [Tile; 1024],
+    pub tile_map1: [Tile; 1024],
+    pub tile_map2: [Tile; 1024],
     vram: [u8; 0x2000],
 }
 

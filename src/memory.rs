@@ -9,7 +9,7 @@ use crate::gpu::Vram;
     //Work RAM bank 0 -> C000-CFFF
     //Work RAM bank 1 -> D000-DFFF
     //Typically not used -> E000-FDFF
-    //Spirte Attribute Table -> FE00-FE9F
+    //Sprite Attribute Table -> FE00-FE9F
     //Not Usable -> FEA0-FEFF
     //IO Ports -> FF00-FF7F
     //High RAM -> FF80-FFFE
@@ -24,24 +24,16 @@ impl Memory {
     pub fn new() -> Memory {
         let path = Path::new("/home/porkchop/programming/rust/rustyroms/drmario.gb");
         let file = fs::read(path).unwrap();
-        println!("File Length {}", file.len());
         let mut buffer: [u8; 0xFFFF] = [0; 0xFFFF];
         
         for (index,instruction) in file.iter().enumerate() {
             let data = *instruction as u8;
             buffer[index] = data;
-            //Print Instructions for Debug Purposes
-            /*
-            if index < 100 {
-                println!("{}    {:#x}", index, data);
-            }
-            */
-
         }
         Memory {
             rom: [1u8; 0x8000],
             vram: Vram::new(),
-            memory: [1u8; 0xFFFF],
+            memory: buffer,
         }
     }
 
@@ -94,58 +86,58 @@ impl Memory {
     }
 
     //0xFF40 - Bit 7
-    fn lcd_display_enable(&self) -> bool {
+    pub fn lcd_display_enable(&self) -> bool {
         self.memory[0xFF40] & (1u8 << 7) != 0
     }
 
     //0xFF40 - Bit 6: false -> 9800, true -> 9C00
-    fn window_tile_display(&self) -> bool {
+    pub fn window_tile_display(&self) -> bool {
         self.memory[0xFF40] & (1u8 << 6) != 0
     }
 
     //0xFF40 Bit 5: false -> window display disabled
-    fn window_display_enable(&self) -> bool {
+    pub fn window_display_enable(&self) -> bool {
         self.memory[0xFF40] & (1u8 << 5) != 0
     }
 
     //0xFF40 Bit 4: false -> 8800-97FF selected
-    fn tile_data_select(&self) -> bool {
+    pub fn tile_data_select(&self) -> bool {
         self.memory[0xFF40] & (1u8 << 4) != 0
     }
 
     //0xFF40 Bit 3: false -> 9800 - 9BFF
-    fn bg_tile_display(&self) -> bool {
+    pub fn bg_tile_display(&self) -> bool {
         self.memory[0xFF40] & (1u8 << 3) != 0
     }
 
     //0xFF40 Bit 2: false -> 8x8 sprites
-    fn sprite_size(&self) -> bool {
+    pub fn sprite_size(&self) -> bool {
         self.memory[0xFF40] & (1u8 << 2) != 0
     }
 
     //0xFF40 Bit 1: false -> sprite disabled
-    fn sprite_enable(&self) -> bool {
+    pub fn sprite_enable(&self) -> bool {
         self.memory[0xFF40] & (1u8 << 1) != 0
     }
 
     //0xFF40 Bit 0: false -> BG display disabled
-    fn bg_display_enable(&self) -> bool {
+    pub fn bg_display_enable(&self) -> bool {
         self.memory[0xFF40] & (1u8 << 0) != 0
     }
 
     //Specifies position in BG pixels map to display at upper left
-    fn scrolly(&self) -> u8 {
+    pub fn scrolly(&self) -> u8 {
         self.memory[0xFF42]
     }
-    fn scrollx(&self) -> u8 {
+    pub fn scrollx(&self) -> u8 {
         self.memory[0xFF43]
     }
 
     //Specifies position in Windows map to display at upper left
-    fn  windowy(&self) -> u8 {
+    pub fn windowy(&self) -> u8 {
         self.memory[0xFF4A]
     }
-    fn windowx(&self) -> u8 {
+    pub fn windowx(&self) -> u8 {
         self.memory[0xFF4B]
     }
 

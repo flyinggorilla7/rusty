@@ -37,18 +37,20 @@ impl Cpu {
         data
     }
 
-    //TODO - Check to make sure order of stack pointer operations is correct
+    //Stack pointer points to most recent item on stack
 
     //push register pair nn onto stack and decrement stack pointer twice
     fn push_word(&mut self, data: u16) {
         self.registers.sp -= 2;
         self.memory.write_word(self.registers.sp, data);
+
     }
 
     //pop word and increment stack pointer twice
     fn pop_word(&mut self) -> u16 {
+        let word = self.memory.read_word(self.registers.sp);
         self.registers.sp += 2;
-        self.memory.read_word(self.registers.sp)
+        word
     }
 
     //Add 8 bit value to register a, set appropriate flags
@@ -291,7 +293,7 @@ impl Cpu {
     
 
 
-
+    
     pub fn cycle(&mut self) -> u8 {
 
         let opcode = self.next_byte();
