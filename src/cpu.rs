@@ -1,5 +1,6 @@
 use crate::register::Registers;
 use crate::memory::Memory;
+use std::num::Wrapping;
 
 pub struct Cpu {
     pub registers: Registers,
@@ -99,7 +100,7 @@ impl Cpu {
         else {
             self.registers.set_carry(0);
         }
-        self.registers.a += data;
+        self.registers.a = self.registers.a.wrapping_add(data);
         if self.registers.a == 0 {
             self.registers.set_zero(1);
         }
@@ -123,7 +124,7 @@ impl Cpu {
         else {
             self.registers.set_carry(0);
         }
-        self.registers.a -= data;
+        self.registers.a = self.registers.a.wrapping_sub(data);
         if self.registers.a == 0 {
             self.registers.set_zero(1);
         }
@@ -155,7 +156,7 @@ impl Cpu {
         else {
             self.registers.set_carry(0);
         }
-        self.registers.a -= data;
+        self.registers.a = self.registers.a.wrapping_sub(data);
         if self.registers.a == 0 {
             self.registers.set_zero(1);
         }
@@ -210,7 +211,7 @@ impl Cpu {
 
     //Fix flags and implementation
     fn cmp(&mut self, data: u8) {
-        if self.registers.a - data == 0 {
+        if (self.registers.a.wrapping_sub(data)) == 0 {
             self.registers.set_zero(1);
         }
         else {
@@ -226,7 +227,7 @@ impl Cpu {
         else {
             self.registers.set_halfcarry(0);
         }
-        data += 1;
+        data = data.wrapping_add(1);
         if data == 0 {
             self.registers.set_zero(1);
         }
@@ -244,7 +245,7 @@ impl Cpu {
         else {
             self.registers.set_halfcarry(0);
         }
-        data -= 1;
+        data = data.wrapping_sub(1);
         if data == 0 {
             self.registers.set_zero(1);
         }
@@ -297,6 +298,8 @@ impl Cpu {
     pub fn cycle(&mut self) -> u8 {
 
         let opcode = self.next_byte();
+
+        println!("opcode : {}", opcode);
 
         let cycles: u8 = match opcode {
 

@@ -57,8 +57,6 @@ pub fn emulate() {
     canvas.clear();
     canvas.copy(&texture, None, Rect::new(0,0,256,256)).unwrap();
 
-    println!("Texture Query: {:?}", texture.query());
-
     canvas.present();
     let mut event_pump = sdl.event_pump().unwrap();
     //256 pixels * 256 pixels * 3 RGB values for each pixel
@@ -67,7 +65,7 @@ pub fn emulate() {
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
 
-        //cycle_count += cpu.cycle();
+        cycle_count += cpu.cycle();
 
         //Tile map and Tile set update automatically when they are written to
         //Pixel Buffer also needs to be updated
