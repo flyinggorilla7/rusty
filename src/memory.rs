@@ -17,14 +17,15 @@ use crate::gpu::Vram;
 pub struct Memory {
     pub rom: [u8; 0x8000],
     pub vram: Vram,
-    pub memory: [u8; 0xFFFF],
+    pub memory: [u8; 65536],
 }
 
 impl Memory {
     pub fn new() -> Memory {
-        let path = Path::new("/home/porkchop/programming/rust/rustyroms/drmario.gb");
+        let path = Path::new("/home/porkchop/programming/rust/rustyroms/cpu_instrs.gb");
         let file = fs::read(path).unwrap();
-        let mut buffer: [u8; 0xFFFF] = [0; 0xFFFF];
+        println!("File Length: {}", file.len());
+        let mut buffer: [u8; 65536] = [0; 65536];
         
         for (index,instruction) in file.iter().enumerate() {
             let data = *instruction as u8;
@@ -40,9 +41,11 @@ impl Memory {
 
     pub fn read_byte(&self, address: u16) -> u8 {
         if (address < 0x8000) || (address > 0x9FFF) {
+            println!("Read {:#x} at address {:#x}", self.memory[address as usize], address);
             self.memory[address as usize]
         }
         else {
+            println!("Read {:#x} at address {:#x}", self.vram.read_byte(address), address);
             self.vram.read_byte(address)
         }
     }
@@ -50,6 +53,9 @@ impl Memory {
     //CHECK ENDIANESS, edit... might be ok now
     pub fn read_word(&self, address: u16) -> u16 {
         if (address < 0x8000) || (address > 0x9FFF) {
+            println!("Read Lower {:#x} at address {:#x}", self.memory[address as usize], address);
+            println!("Read Upper {:#x} at address {:#x}", self.memory[(address+1) as usize], address+1);
+
             let lower: u8 = self.memory[address as usize];
             let upper: u8 = self.memory[(address+1) as usize];
             ((upper as u16) << 8) | (lower as u16)
@@ -68,6 +74,7 @@ impl Memory {
         else {
             self.vram.write_byte(address, data)
         }
+        println!("Wrote {:#x} to address {:#x}", data, address);
     }
 
     //Check endianess, I think this one is good though
@@ -80,8 +87,10 @@ impl Memory {
         }
         else {
             self.vram.write_byte(address, lower);
-            self.vram.write_byte(address, upper);
+            self.vram.write_byte(address+1, upper);
         }
+        println!("Wrote {:#x} to address {:#x}", lower, address);
+        println!("Wrote {:#x} to address {:#x}", upper, address+1);
 
     }
 
@@ -165,6 +174,22 @@ mod tests {
         assert_eq!(memory.window_tile_display(), true);
         memory.write_byte(0xFF40, 0x00);
         assert_eq!(memory.window_tile_display(), false);
+    }
+
+    #[test]
+    fn test_read_word() {
+        let mut memory = Memory::new();
+        memory.write_byte(0x2000, 0xBA);
+        memory.write_byte(0x2001, 0xDC);
+        assert_eq!(memory.read_word(0x2000), 0xDCBA);
+    }
+
+    #[test]
+    fn test_write_word() {
+        let mut memory = Memory::new();
+        memory.write_word(0x6FF0, 0xDCBA);
+        assert_eq!(memory.memory[0x6FF0], 0xBA);
+        assert_eq!(memory.memory[0x6FF1], 0xDC);
     }
 
 

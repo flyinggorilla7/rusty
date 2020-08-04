@@ -14,7 +14,6 @@ mod cpu;
 mod register;
 mod memory;
 mod gpu;
-mod emulator;
 
 
 
@@ -64,13 +63,21 @@ pub fn emulate() {
 
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
-
+        println!("Program Counter: {:#x}", cpu.registers.pc);
         cycle_count += cpu.cycle() as u32;
+
+        //Test for Tile Updates
+        //cpu.memory.vram.write_byte(address: u16, data: u8)
+
 
         //Tile map and Tile set update automatically when they are written to
         //Pixel Buffer also needs to be updated
         let mut index: u32 = 0;
-        if cycle_count > 16000 {
+        if cycle_count > 0 {
+            /*println!("LCD Display Enable: {}",cpu.memory.lcd_display_enable());
+            println!("Tile Data Select: {}",cpu.memory.tile_data_select());
+            println!("Window Tile Display: {}",cpu.memory.window_tile_display());*/
+
             for tile in cpu.memory.vram.tile_map1.iter() {
                 for row in tile {
                     for pixel in row {
@@ -122,7 +129,7 @@ pub fn emulate() {
             }
         }
 
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32));
         canvas.present();
     }
 }

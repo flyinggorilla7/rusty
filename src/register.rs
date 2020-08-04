@@ -22,7 +22,7 @@ impl Registers {
             f: 0x00,
             h: 0x00,
             l: 0x00,
-            pc: 0x00,
+            pc: 0x100,
             sp: 0xFFFE,
         }
     }

@@ -298,7 +298,7 @@ impl Cpu {
 
         let opcode = self.next_byte();
 
-        println!("opcode : {}", opcode);
+        println!("opcode : {:#x} : {}", opcode, opcode);
 
         let cycles: u8 = match opcode {
 
