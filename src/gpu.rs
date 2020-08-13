@@ -14,7 +14,7 @@
 //So How Will We Do This?
 
 const VRAM_START: u16 = 0x8000;
-const VRAM_END: u16   = 0x9FFF;
+//const VRAM_END: u16   = 0x9FFF;
 
 
 //Since each pixel is governed by two bits...

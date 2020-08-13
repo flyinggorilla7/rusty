@@ -19,10 +19,10 @@ pub struct Memory {
     pub vram: Vram,
     pub memory: [u8; 65536],
 }
-
+///home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb
 impl Memory {
     pub fn new() -> Memory {
-        let path = Path::new("/home/porkchop/programming/rust/rustyroms/cpu_instrs.gb");
+        let path = Path::new("/home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb");
         let file = fs::read(path).unwrap();
         println!("File Length: {}", file.len());
         let mut buffer: [u8; 65536] = [0; 65536];
@@ -31,6 +31,9 @@ impl Memory {
             let data = *instruction as u8;
             buffer[index] = data;
         }
+        println!("Cartridge Type: {}", buffer[0x147]);
+        println!("ROM Size: {}", buffer[0x148]);
+        println!("RAM Size: {}", buffer[0x149]);
         Memory {
             rom: [1u8; 0x8000],
             vram: Vram::new(),

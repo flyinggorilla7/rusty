@@ -1,13 +1,12 @@
 extern crate sdl2;
 
 //With sdl, textures are image data for gpu, surfaces are image data for cpu
-use sdl2::pixels::{Color, PixelFormatEnum};
+use sdl2::pixels::PixelFormatEnum;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::render::{Canvas, CanvasBuilder};
 use std::time::Duration;
-use sdl2::surface::Surface;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::Rect;
 use std::env;
 
 mod cpu;
@@ -54,7 +53,7 @@ pub fn emulate() {
     let mut pixel_buffer: [u8; (256*256*3) as usize] = [0; (256*256*3) as usize];
 
             //Test for Tile Updates
-        cpu.memory.vram.write_byte(0x8010, 0xFF);
+        /*cpu.memory.vram.write_byte(0x8010, 0xFF);
         cpu.memory.vram.write_byte(0x8011, 0xFF);
         cpu.memory.vram.write_byte(0x8012, 0xFF);
         cpu.memory.vram.write_byte(0x8013, 0xFF);
@@ -74,17 +73,18 @@ pub fn emulate() {
         cpu.memory.vram.update_tile_map(0x1800, 0x01);
         cpu.memory.vram.update_tile_map(0x1801, 0x01);
         cpu.memory.vram.update_tile_map(0x1801, 0x01);
-        cpu.memory.vram.update_tile_map(0x1820, 0x01);
+        cpu.memory.vram.update_tile_map(0x1820, 0x01);*/
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
-        println!("Program Counter: {:#x}", cpu.registers.pc);
-        //cycle_count += cpu.cycle() as u32;
-
+        println!("Program Counter: {:#x}, {}", cpu.registers.pc, cpu.registers.pc);
+        cycle_count += cpu.cycle() as u32;
+        //println!("Serial SB: {}", cpu.memory.read_byte(0xFF01));
+        //println!("Serial SC: {}", cpu.memory.read_byte(0xFF02));
 
         //Tile map and Tile set update automatically when they are written to
         //Pixel Buffer also needs to be updated
         let mut index: u32 = 0;
-        if cycle_count >= 0 {
+        if cycle_count > 0 {
             /*println!("LCD Display Enable: {}",cpu.memory.lcd_display_enable());
             println!("Tile Data Select: {}",cpu.memory.tile_data_select());
             println!("Window Tile Display: {}",cpu.memory.window_tile_display());*/
@@ -128,7 +128,7 @@ pub fn emulate() {
 
             //Pitch is 256 Pixels * 3 bytes per Pixel * SCALE
             texture.update(None, &pixel_buffer, 256 * 3).expect("Failed to update texture.");
-            canvas.copy(&texture, Rect::new(0,0,GAME_WIDTH,GAME_HEIGHT), None).unwrap();
+            canvas.copy(&texture, Rect::new(scrollx,scrolly,GAME_WIDTH,GAME_HEIGHT), None).unwrap();
             //canvas.copy(&texture, None, Rect::new(scrollx, scrolly,GAME_HEIGHT*SCALE,GAME_HEIGHT*SCALE)).unwrap();
             cycle_count = 0;
         }
@@ -143,7 +143,7 @@ pub fn emulate() {
             }
         }
 
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32));
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32/20));
         canvas.present();
     }
 }

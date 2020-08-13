@@ -22,6 +22,7 @@ impl Registers {
             f: 0x00,
             h: 0x00,
             l: 0x00,
+            //Make sure to put pc back to 100
             pc: 0x100,
             sp: 0xFFFE,
         }
