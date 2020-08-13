@@ -53,7 +53,7 @@ pub fn emulate() {
     let mut pixel_buffer: [u8; (256*256*3) as usize] = [0; (256*256*3) as usize];
 
             //Test for Tile Updates
-        /*cpu.memory.vram.write_byte(0x8010, 0xFF);
+        cpu.memory.vram.write_byte(0x8010, 0xFF);
         cpu.memory.vram.write_byte(0x8011, 0xFF);
         cpu.memory.vram.write_byte(0x8012, 0xFF);
         cpu.memory.vram.write_byte(0x8013, 0xFF);
@@ -73,11 +73,15 @@ pub fn emulate() {
         cpu.memory.vram.update_tile_map(0x1800, 0x01);
         cpu.memory.vram.update_tile_map(0x1801, 0x01);
         cpu.memory.vram.update_tile_map(0x1801, 0x01);
-        cpu.memory.vram.update_tile_map(0x1820, 0x01);*/
+        cpu.memory.vram.update_tile_map(0x1820, 0x01);
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
-        //println!("Program Counter: {:#x}, {}", cpu.registers.pc, cpu.registers.pc);
+        //println!("Result: {}", 0x0Cu16.wrapping_add(0xFBu8 as i8 as u16));
+
         cycle_count += cpu.cycle() as u32;
+        if cpu.registers.pc == 0x0C {
+            println!("Finished Clearing VRAM");
+        }
         //println!("Serial SB: {}", cpu.memory.read_byte(0xFF01));
         //println!("Serial SC: {}", cpu.memory.read_byte(0xFF02));
 
@@ -143,7 +147,7 @@ pub fn emulate() {
             }
         }
 
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32/20));
+        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32/100));
         canvas.present();
     }
 }

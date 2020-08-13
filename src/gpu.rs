@@ -94,7 +94,7 @@ impl Vram {
             address -= VRAM_START;
         }
         self.vram[address as usize] = data;
-        println!("VRAM write {:#x} to address: {}", data, address);
+        println!("VRAM write {:#04X} to address: {:#04X}", data, address);
         if address < 0x1800 {
             self.update_tile(address, data);
             self.refresh_tile_map();

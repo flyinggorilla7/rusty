@@ -22,7 +22,7 @@ pub struct Memory {
 ///home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb
 impl Memory {
     pub fn new() -> Memory {
-        let path = Path::new("/home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb");
+        let path = Path::new("/home/porkchop/programming/rust/rustyroms/drmario.gb");
         let file = fs::read(path).unwrap();
         println!("File Length: {}", file.len());
         let mut buffer: [u8; 65536] = [0; 65536];
@@ -56,8 +56,8 @@ impl Memory {
     //CHECK ENDIANESS, edit... might be ok now
     pub fn read_word(&self, address: u16) -> u16 {
         if (address < 0x8000) || (address > 0x9FFF) {
-            println!("Read Lower {:#x} at address {:#x}", self.memory[address as usize], address);
-            println!("Read Upper {:#x} at address {:#x}", self.memory[(address+1) as usize], address+1);
+            //println!("Read Lower {:#x} at address {:#x}", self.memory[address as usize], address);
+            //println!("Read Upper {:#x} at address {:#x}", self.memory[(address+1) as usize], address+1);
 
             let lower: u8 = self.memory[address as usize];
             let upper: u8 = self.memory[(address+1) as usize];
