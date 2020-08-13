@@ -76,7 +76,7 @@ pub fn emulate() {
         cpu.memory.vram.update_tile_map(0x1820, 0x01);*/
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
-        println!("Program Counter: {:#x}, {}", cpu.registers.pc, cpu.registers.pc);
+        //println!("Program Counter: {:#x}, {}", cpu.registers.pc, cpu.registers.pc);
         cycle_count += cpu.cycle() as u32;
         //println!("Serial SB: {}", cpu.memory.read_byte(0xFF01));
         //println!("Serial SC: {}", cpu.memory.read_byte(0xFF02));

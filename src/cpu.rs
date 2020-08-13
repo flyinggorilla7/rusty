@@ -18,6 +18,24 @@ pub struct Cpu  {
 
 impl Cpu {
 
+    fn print_current_status(&self, opcode: u8, cb: bool) {
+        let neumonic: &str;
+        if cb {
+            neumonic = self.cb_instructions[opcode as usize].1;
+        }
+        else {
+            neumonic = self.instructions[opcode as usize].1;
+        }
+        //Opcode
+        println!("Program Counter: {:#x}\t Next Opcode: {:#x}\t Neumonic {}\n", self.registers.pc - 1,opcode, neumonic);
+        //Registers
+        println!("Registers\nA: {:#x}\t B: {:#x}\t D: {:#x}\t H: {:#x}\n", self.registers.a, self.registers.b, self.registers.d, self.registers.h);
+        println!("F: {:#x}\t C: {:#x}\t E: {:#x}\t L: {:#x}\n", self.registers.f, self.registers.c, self.registers.e, self.registers.l);
+        //Flags
+        println!("Carry: {}\t Zero: {}\t Halfcarry: {}\t Add/Sub: {}\n\n", self.registers.check_carry(), self.registers.check_zero(), self.registers.check_halfcarry(), self.registers.check_addsub())
+
+    }
+
     pub fn new() -> Cpu {
         Cpu {
             registers: Registers::new(),
@@ -408,7 +426,7 @@ impl Cpu {
 
         let opcode = self.next_byte();
 
-        println!("opcode : {:#x} : {}", opcode, opcode);
+        self.print_current_status(opcode, false);
 
         let cycles: u8 = match opcode {
 
@@ -959,6 +977,9 @@ impl Cpu {
 
 
     fn cb_decode(&mut self, opcode: u8) -> u8 {
+
+        self.print_current_status(opcode, true);
+
         let cycles = match opcode{
             //SWAP upper and lower nibbles of n
             0x37 => {self.registers.a = self.swap(self.registers.a); 2},

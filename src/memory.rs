@@ -44,11 +44,11 @@ impl Memory {
 
     pub fn read_byte(&self, address: u16) -> u8 {
         if (address < 0x8000) || (address > 0x9FFF) {
-            println!("Read {:#x} at address {:#x}", self.memory[address as usize], address);
+            //println!("Read {:#x} at address {:#x}", self.memory[address as usize], address);
             self.memory[address as usize]
         }
         else {
-            println!("Read {:#x} at address {:#x}", self.vram.read_byte(address), address);
+            //println!("Read {:#x} at address {:#x}", self.vram.read_byte(address), address);
             self.vram.read_byte(address)
         }
     }
