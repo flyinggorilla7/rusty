@@ -24,6 +24,8 @@ fn main() {
 }
 
 pub fn emulate() {
+    let row: u8 = 114;
+    println!("SIGNED {}", row as i32);
     let mut cpu = cpu::Cpu::new();
     let mut cycle_count: u32 = 0;    
     let sdl = sdl2::init().unwrap();
@@ -88,54 +90,66 @@ pub fn emulate() {
         //Tile map and Tile set update automatically when they are written to
         //Pixel Buffer also needs to be updated
         let mut index: u32 = 0;
-        if cycle_count > 0 {
-            /*println!("LCD Display Enable: {}",cpu.memory.lcd_display_enable());
-            println!("Tile Data Select: {}",cpu.memory.tile_data_select());
-            println!("Window Tile Display: {}",cpu.memory.window_tile_display());*/
+        /*println!("LCD Display Enable: {}",cpu.memory.lcd_display_enable());
+        println!("Tile Data Select: {}",cpu.memory.tile_data_select());
+        println!("Window Tile Display: {}",cpu.memory.window_tile_display());*/
 
-            for tile_offset in 0..=31 {
-                for tile_row in 0..=7 {
-                    for tile in 0..=31 {
-                        for tile_col in 0..=7 {
-                            match cpu.memory.vram.tile_map1[tile_offset*32 + tile][tile_row][tile_col] {
-                                gpu::PixelColor::Lightest => {
-                                    pixel_buffer[index as usize] = 0xFF;
-                                    pixel_buffer[(index+1) as usize] = 0xFF;
-                                    pixel_buffer[(index+2) as usize] = 0xFF;
-                                }
-                                gpu::PixelColor::Light => {
-                                    pixel_buffer[index as usize] = 0xB3;
-                                    pixel_buffer[(index+1) as usize] = 0xB3;
-                                    pixel_buffer[(index+2) as usize] = 0xB3;
-                                }
-                                gpu::PixelColor::Dark => {
-                                    pixel_buffer[index as usize] = 0x4D;
-                                    pixel_buffer[(index+1) as usize] = 0x4D;
-                                    pixel_buffer[(index+2) as usize] = 0x4D;
-                                }
-                                gpu::PixelColor::Darkest => {
-                                    pixel_buffer[index as usize] = 0x00;
-                                    pixel_buffer[(index + 1) as usize] = 0x00;
-                                    pixel_buffer[(index + 2) as usize] = 0x00;
-                                }
+        for tile_offset in 0..=31 {
+            for tile_row in 0..=7 {
+                for tile in 0..=31 {
+                    for tile_col in 0..=7 {
+                        match cpu.memory.vram.tile_map1[tile_offset*32 + tile][tile_row][tile_col] {
+                            gpu::PixelColor::Lightest => {
+                                pixel_buffer[index as usize] = 0xFF;
+                                pixel_buffer[(index+1) as usize] = 0xFF;
+                                pixel_buffer[(index+2) as usize] = 0xFF;
                             }
-                            index += 3;
+                            gpu::PixelColor::Light => {
+                                pixel_buffer[index as usize] = 0xB3;
+                                pixel_buffer[(index+1) as usize] = 0xB3;
+                                pixel_buffer[(index+2) as usize] = 0xB3;
+                            }
+                            gpu::PixelColor::Dark => {
+                                pixel_buffer[index as usize] = 0x4D;
+                                pixel_buffer[(index+1) as usize] = 0x4D;
+                                pixel_buffer[(index+2) as usize] = 0x4D;
+                            }
+                            gpu::PixelColor::Darkest => {
+                                pixel_buffer[index as usize] = 0x00;
+                                pixel_buffer[(index + 1) as usize] = 0x00;
+                                pixel_buffer[(index + 2) as usize] = 0x00;
+                            }
                         }
+                        index += 3;
                     }
                 }
             }
+        }
 
 
-            //Update screen
-            let scrollx = cpu.memory.scrollx() as i32;
-            let scrolly = cpu.memory.scrolly() as i32;
+        //Update screen
+        let scrollx = cpu.memory.scrollx() as i32;
+        let scrolly = cpu.memory.scrolly() as i32;
 
-            //Pitch is 256 Pixels * 3 bytes per Pixel * SCALE
-            texture.update(None, &pixel_buffer, 256 * 3).expect("Failed to update texture.");
-            canvas.copy(&texture, Rect::new(scrollx,scrolly,GAME_WIDTH,GAME_HEIGHT), None).unwrap();
-            //canvas.copy(&texture, None, Rect::new(scrollx, scrolly,GAME_HEIGHT*SCALE,GAME_HEIGHT*SCALE)).unwrap();
+        //Pitch is 256 Pixels * 3 bytes per Pixel * SCALE
+        texture.update(None, &pixel_buffer, 256 * 3).expect("Failed to update texture.");
+
+        //Update Row Logic - Row Should update every 114 cycles
+        if cycle_count > 114 {
+            let mut scan_row = cpu.memory.ly() as i32;
+            if scan_row == 153 {
+                scan_row = 0;
+            }
+            if scan_row < 144 {
+                canvas.copy(&texture, Rect::new(scrollx,scrolly + scan_row,GAME_WIDTH,1), Rect::new(0,scan_row,GAME_WIDTH,1)).unwrap();
+
+                //canvas.copy(&texture, Rect::new(scrollx,scrolly,GAME_WIDTH,GAME_HEIGHT), None).unwrap();
+            }
+            cpu.memory.set_ly(scan_row as u8 + 1);
             cycle_count = 0;
         }
+
+        //canvas.copy(&texture, None, Rect::new(scrollx, scrolly,GAME_HEIGHT*SCALE,GAME_HEIGHT*SCALE)).unwrap();
 
         for event in event_pump.poll_iter() {
             match event {

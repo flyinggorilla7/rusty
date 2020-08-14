@@ -145,6 +145,14 @@ impl Memory {
         self.memory[0xFF43]
     }
 
+    pub fn set_ly(&mut self, row: u8) {
+        self.write_byte(0xFF44, row);
+    }
+
+    pub fn ly(&self) -> u8 {
+        self.memory[0xFF44]
+    }
+
     //Specifies position in Windows map to display at upper left
     pub fn windowy(&self) -> u8 {
         self.memory[0xFF4A]

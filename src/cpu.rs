@@ -1303,3 +1303,17 @@ impl Cpu {
 
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn xor_test() {
+        let mut cpu = Cpu::new();
+        cpu.registers.a = 0x0D;
+        cpu.xor(0x0D);
+        assert_eq!(cpu.registers.a, 0x00);
+    }
+
+}
