@@ -39,15 +39,47 @@ type TileSet = [Tile; 384];
 
 pub struct Vram {
     tile_set: TileSet, 
-    pub tile_map1: [Tile; 1024],
-    pub tile_map1_addresses: [u8; 1024],
-    pub tile_map2_addresses: [u8; 1024],
-    pub tile_map2: [Tile; 1024],
+    //pub tile_map1: [Tile; 1024],
+    //pub tile_map1_addresses: [u8; 1024],
+    //pub tile_map2_addresses: [u8; 1024],
+    //pub tile_map2: [Tile; 1024],
     vram: [u8; 0x2000],
     render_mode: u8,
     render_mode_cycles: u32,
-    scan_row: u8,
+    pub lcd_control: LCD_Control, //0xFF40
+    pub scroll_y: u8, //0xFF42
+    pub scroll_x: u8, //0xFF43
+    pub window_y: u8, //0xFF4A
+    pub window_x: u8, //0xFF4B
+    pub scan_row: u8, //0xFF44
+    pub background_palette: u8, //0xFF47
     pixel_buffer: [u8; (256*256*3) as usize],
+}
+
+pub struct LCD_Control {
+    background: bool, //Background on when true
+    sprites: bool, //Sprites on when true
+    sprite_size: bool, //8x16 when true, 8x8 when false
+    bg_map: bool, //1 when true, 0 when false
+    bg_set: bool, //1 when true, 0 when false
+    window: bool, //Enabled when true
+    window_map: bool, //1 when true, 0 when false
+    display: bool, //On when true, Off when false
+}
+
+impl LCD_Control {
+    pub fn new() -> LCD_Control {
+        LCD_Control {
+            background: false,
+            sprites: false,
+            sprite_size: false,
+            bg_map: false,
+            bg_set: false,
+            window: false,
+            window_map: false,
+            display: false,
+        }
+    }
 }
 
 impl Vram {
@@ -58,18 +90,26 @@ impl Vram {
         let blank_set = [blank_tile; 384];
         Vram {
             tile_set: blank_set,
-            tile_map1: [blank_tile; 1024],
-            tile_map1_addresses : [0; 1024],
-            tile_map2_addresses : [0; 1024],
-            tile_map2: [blank_tile; 1024],
+            //tile_map1: [blank_tile; 1024],
+            //tile_map1_addresses : [0; 1024],
+            //tile_map2_addresses : [0; 1024],
+            //tile_map2: [blank_tile; 1024],
             vram: [0;0x2000],
             render_mode : 0,
             render_mode_cycles: 0,
+            lcd_control: LCD_Control::new(),
+            scroll_y: 0,
+            scroll_x: 0,
+            window_y: 0,
+            window_x: 0,
             scan_row: 0,
+            background_palette: 0,
             pixel_buffer: [0; (256*256*3) as usize],
         }
 
     }
+
+
 
     pub fn step(&mut self,) {
 
@@ -124,17 +164,84 @@ impl Vram {
                 }
             }
 
-            .. => panic!("Invalid Render Mode!");
+            _ => {panic!("Invalid Render Mode!")}
         }
     }
 
     pub fn render_scan(&mut self) {
-        if lcd_display_enable {
+        if self.lcd_control.display {
 
+            let map_offset: u16 = 0;
+
+            if self.lcd_control.bg_map {
+                map_offset = 0x1C00;
+            }
+            else {
+                map_offset = 0x1800;
+            }
+
+            //wrapping add
+            //EX: scan_row = 0x05, scrolly = 0xFF
+            //EX: tile_y = 0x04
+            let mut row_offset = self.scan_row.wrapping_add(self.scroll_y);
+
+            //Add tile
+            map_offset += (32 * row_offset) as u16;
+
+            //tile_pixel_y is the row of the current tile_being rendered
+            let mut tile_pixel_y = row_offset & 0x07;
+
+            //line_offset is where scan will start in row
+            //this is equivalent to the tile position in the row
+            let line_offset = self.scroll_x >> 3;
+
+            //tile_pixel_x is the column of the current tile being rendered
+            let mut tile_pixel_x = self.scroll_x & 0x07;
+
+            //Obtain index of next tile
+            let mut tile_number: u16 = self.vram[(map_offset+line_offset as u16) as usize] as u16;
+            //If second tile map is being used, indices are signed
+            //Tile set is 384 Tiles
+            if (self.lcd_control.bg_set) && (tile_number < 128) {
+                tile_number += 256;
+            }
+
+            //Read tile from correct tile map
+            let mut tile = self.tile_set[tile_number as usize];
+
+            let mut pixel_buffer_offset = self.scan_row * 160 * 3;
+
+            for i in 0..160 {
+
+                let color: u8 = match tile[tile_pixel_y as usize][tile_pixel_x as usize] {
+                    PixelColor::Darkest => 0x00,
+                    PixelColor::Dark => 0x4D,
+                    PixelColor::Light => 0xB3,
+                    PixelColor::Lightest => 0xFF,
+                };
+                self.pixel_buffer[pixel_buffer_offset as usize] = color;
+                self.pixel_buffer[(pixel_buffer_offset+1) as usize] = color;
+                self.pixel_buffer[(pixel_buffer_offset+2) as usize] = color;
+                pixel_buffer_offset += 3;
+
+                tile_pixel_x += 1;
+
+                if tile_pixel_x == 8 {
+                    //Start at the first pixel of the next tile
+                    tile_pixel_x = 0;
+
+                    //Increase line offset by 1, wrap around to the beginning of the line if greater than 255
+                    line_offset.wrapping_add(1);
+
+                    //Get new tile
+                    tile_number = self.vram[(map_offset+line_offset as u16) as usize] as u16;
+                    tile = self.tile_set[tile_number as usize];
+                }
+            }
         }
     }
 
-    pub fn update_tile_map(&mut self, mut address: u16, data: u8) {
+    /*pub fn update_tile_map(&mut self, mut address: u16, data: u8) {
         if address >= VRAM_START {
             address -= VRAM_START;
         }
@@ -152,7 +259,7 @@ impl Vram {
 
             _ => {println!("Invalid Tile Map Update");}
         };
-    }
+    }*/
 
     //Read Byte in VRAM
     pub fn read_byte(&self, mut address: u16) -> u8 {
@@ -171,19 +278,19 @@ impl Vram {
         //println!("VRAM write {:#04X} to address: {:#04X}", data, address);
         if address < 0x1800 {
             self.update_tile(address, data);
-            self.refresh_tile_map();
+            //self.refresh_tile_map();
         }
-        else {
-            self.update_tile_map(address, data);
-        }
+        //else {
+        //    self.update_tile_map(address, data);
+        //}
     }
 
-    //Used to refresh tile map for any tiles that got modified
+    /*//Used to refresh tile map for any tiles that got modified
     pub fn refresh_tile_map(&mut self) {
         for (index, address) in self.tile_map1_addresses.iter().enumerate() {
             self.tile_map1[index] = self.tile_set[*address as usize];
         }
-    } 
+    } */
 
     //Obtain corresponsing number of tile 
     pub fn tile_number(mut address: u16) -> u16 {
@@ -271,7 +378,7 @@ mod tests {
             PixelColor::Darkest,PixelColor::Darkest,PixelColor::Darkest,PixelColor::Darkest]);     
     }
 
-    #[test]
+    /*#[test]
     fn test_update_tile_map() {
         let mut vram = Vram::new();
         vram.write_byte(0x801E, 0xFF);
@@ -284,6 +391,6 @@ mod tests {
         vram.write_byte(0x801E, 0x50);
         vram.write_byte(0x801F, 0x50);
         assert_eq!(vram.tile_map1[0], vram.tile_set[1]);
-    }
+    }*/
 
 }

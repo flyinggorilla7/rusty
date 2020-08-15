@@ -43,34 +43,44 @@ impl Memory {
 
 
     pub fn read_byte(&self, address: u16) -> u8 {
-        if (address < 0x8000) || (address > 0x9FFF) {
-            //println!("Read {:#x} at address {:#x}", self.memory[address as usize], address);
-            self.memory[address as usize]
+        match address {
+            0x0000..=0x7FFF => self.memory[address as usize],
+            0x8000..=0x9FFF => self.vram.read_byte(address),
+            0xFF42 => self.vram.scroll_y,
+            0xFF43 => self.vram.scroll_x,
+            0xFF44 => self.vram.scan_row,
+            0xFF4A => self.vram.window_y,
+            0xFF4B => self.vram.window_x,
+            _ => self.memory[address as usize],
+
         }
-        else {
-            //println!("Read {:#x} at address {:#x}", self.vram.read_byte(address), address);
-            self.vram.read_byte(address)
-        }
+
     }
 
-    //CHECK ENDIANESS, edit... might be ok now
     pub fn read_word(&self, address: u16) -> u16 {
-        if (address < 0x8000) || (address > 0x9FFF) {
-            //println!("Read Lower {:#x} at address {:#x}", self.memory[address as usize], address);
-            //println!("Read Upper {:#x} at address {:#x}", self.memory[(address+1) as usize], address+1);
+        
+        let lower: u8 = self.read_byte(address);
+        let upper: u8 = self.read_byte(address + 1);
 
-            let lower: u8 = self.memory[address as usize];
-            let upper: u8 = self.memory[(address+1) as usize];
-            ((upper as u16) << 8) | (lower as u16)
-        }
-        else {
-            let lower: u8 = self.vram.read_byte(address);
-            let upper: u8 = self.vram.read_byte(address+1);
-            ((upper as u16) << 8) | (lower as u16)
-        } 
+        ((upper as u16) << 8) | (lower as u16)
     }
 
     pub fn write_byte(&mut self, address: u16, data: u8) {
+        match address {
+            0x0000..=0x7FFF => self.memory[address as usize] = data,
+            0x8000..=0x9FFF => self.vram.write_byte(address, data),
+            0xFF42 => self.vram.scroll_y = data,
+            0xFF43 => self.vram.scroll_x = data,
+            0xFF44 => self.vram.scan_row = 0, //Writing to this register should always reset the row to zero
+            0xFF4A => self.vram.window_y = data,
+            0xFF4B => self.vram.window_x = data,
+
+
+        }
+
+
+
+
         if (address < 0x8000) || (address > 0x9FFF) {
             self.memory[address as usize] = data;
         }
