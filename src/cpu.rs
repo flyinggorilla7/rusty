@@ -439,7 +439,7 @@ impl Cpu {
 
         let opcode = self.next_byte();
 
-        self.print_current_status(opcode, false);
+        //self.print_current_status(opcode, false);
 
         let cycles: u8 = match opcode {
 
@@ -759,7 +759,7 @@ impl Cpu {
             //CB
             //CHECK CYCLES FOR THIS ONE
             0xCB => {let byte = self.next_byte(); self.cb_decode(byte) + 1},
-            _ => {println!("This opcode has not been implemented!"); 1}
+            _ => {println!("This opcode has not been implemented! {:#04X}", opcode); 1}
         };
         cycles
     }
@@ -991,7 +991,7 @@ impl Cpu {
 
     fn cb_decode(&mut self, opcode: u8) -> u8 {
 
-        self.print_current_status(opcode, true);
+        //self.print_current_status(opcode, true);
 
         let cycles = match opcode{
             //SWAP upper and lower nibbles of n

@@ -77,7 +77,7 @@ impl Memory {
         else {
             self.vram.write_byte(address, data)
         }
-        println!("Wrote {:#x} to address {:#x}", data, address);
+        //println!("Wrote {:#x} to address {:#x}", data, address);
     }
 
     //Check endianess, I think this one is good though
@@ -92,8 +92,8 @@ impl Memory {
             self.vram.write_byte(address, lower);
             self.vram.write_byte(address+1, upper);
         }
-        println!("Wrote {:#x} to address {:#x}", lower, address);
-        println!("Wrote {:#x} to address {:#x}", upper, address+1);
+        //println!("Wrote {:#x} to address {:#x}", lower, address);
+        //println!("Wrote {:#x} to address {:#x}", upper, address+1);
 
     }
 

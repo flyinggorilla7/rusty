@@ -25,7 +25,6 @@ fn main() {
 
 pub fn emulate() {
     let row: u8 = 114;
-    println!("SIGNED {}", row as i32);
     let mut cpu = cpu::Cpu::new();
     let mut cycle_count: u32 = 0;    
     let sdl = sdl2::init().unwrap();
@@ -77,9 +76,10 @@ pub fn emulate() {
         cpu.memory.vram.update_tile_map(0x1801, 0x01);
         cpu.memory.vram.update_tile_map(0x1820, 0x01);
     //CPU cycles, it increments program counter and executes the next instruction
+    let mut old_cycle_count: u32;
     'running: loop {
         //println!("Result: {}", 0x0Cu16.wrapping_add(0xFBu8 as i8 as u16));
-
+        old_cycle_count = cycle_count;
         cycle_count += cpu.cycle() as u32;
         if cpu.registers.pc == 0x0C {
             println!("Finished Clearing VRAM");
@@ -140,12 +140,14 @@ pub fn emulate() {
             if scan_row == 153 {
                 scan_row = 0;
             }
-            if scan_row < 144 {
+            if scan_row <= 144 {
                 canvas.copy(&texture, Rect::new(scrollx,scrolly + scan_row,GAME_WIDTH,1), Rect::new(0,scan_row,GAME_WIDTH,1)).unwrap();
 
                 //canvas.copy(&texture, Rect::new(scrollx,scrolly,GAME_WIDTH,GAME_HEIGHT), None).unwrap();
             }
+            //println!("Scan Row");
             cpu.memory.set_ly(scan_row as u8 + 1);
+            //cpu.memory.set_ly(scan_row as u8 + (cycle_count - old_cycle_count) as u8);
             cycle_count = 0;
         }
 
