@@ -39,10 +39,6 @@ type TileSet = [Tile; 384];
 
 pub struct Vram {
     tile_set: TileSet, 
-    //pub tile_map1: [Tile; 1024],
-    //pub tile_map1_addresses: [u8; 1024],
-    //pub tile_map2_addresses: [u8; 1024],
-    //pub tile_map2: [Tile; 1024],
     vram: [u8; 0x2000],
     render_mode: u8,
     render_mode_cycles: u32,
@@ -90,10 +86,6 @@ impl Vram {
         let blank_set = [blank_tile; 384];
         Vram {
             tile_set: blank_set,
-            //tile_map1: [blank_tile; 1024],
-            //tile_map1_addresses : [0; 1024],
-            //tile_map2_addresses : [0; 1024],
-            //tile_map2: [blank_tile; 1024],
             vram: [0;0x2000],
             render_mode : 0,
             render_mode_cycles: 0,
@@ -241,26 +233,6 @@ impl Vram {
         }
     }
 
-    /*pub fn update_tile_map(&mut self, mut address: u16, data: u8) {
-        if address >= VRAM_START {
-            address -= VRAM_START;
-        }
-        match address {
-            //Each of these ranges is 1024 tiles (Or 32 * 32)
-            0x1800..=0x1BFF => {
-                self.tile_map1_addresses[(address - 0x1800) as usize] = data;
-                self.tile_map1[(address - 0x1800) as usize] = self.tile_set[data as usize];
-                
-            }
-            0x1C00..=0x1FFF => {
-                self.tile_map2[(address - 0x1C00) as usize] = self.tile_set[(data + 128) as usize];
-
-            }
-
-            _ => {println!("Invalid Tile Map Update");}
-        };
-    }*/
-
     //Read Byte in VRAM
     pub fn read_byte(&self, mut address: u16) -> u8 {
         if address >= VRAM_START {
@@ -278,19 +250,8 @@ impl Vram {
         //println!("VRAM write {:#04X} to address: {:#04X}", data, address);
         if address < 0x1800 {
             self.update_tile(address, data);
-            //self.refresh_tile_map();
         }
-        //else {
-        //    self.update_tile_map(address, data);
-        //}
     }
-
-    /*//Used to refresh tile map for any tiles that got modified
-    pub fn refresh_tile_map(&mut self) {
-        for (index, address) in self.tile_map1_addresses.iter().enumerate() {
-            self.tile_map1[index] = self.tile_set[*address as usize];
-        }
-    } */
 
     //Obtain corresponsing number of tile 
     pub fn tile_number(mut address: u16) -> u16 {
@@ -377,20 +338,5 @@ mod tests {
         assert_eq!(vram.tile_set[1][7], [PixelColor::Darkest, PixelColor::Darkest, PixelColor::Darkest, PixelColor::Darkest,
             PixelColor::Darkest,PixelColor::Darkest,PixelColor::Darkest,PixelColor::Darkest]);     
     }
-
-    /*#[test]
-    fn test_update_tile_map() {
-        let mut vram = Vram::new();
-        vram.write_byte(0x801E, 0xFF);
-        vram.write_byte(0x801F, 0xFF);
-        //Put Tile 1 in Position 0 of Tile Map
-        vram.write_byte(0x1800, 0x01);
-        assert_eq!(vram.tile_map1[0], vram.tile_set[1]);
-
-        //This test will check to see if the tile_map will update automatically after a tile is updated
-        vram.write_byte(0x801E, 0x50);
-        vram.write_byte(0x801F, 0x50);
-        assert_eq!(vram.tile_map1[0], vram.tile_set[1]);
-    }*/
 
 }
