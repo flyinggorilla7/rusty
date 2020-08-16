@@ -57,14 +57,14 @@ pub struct Vram {
 }
 
 pub struct LCD_Control {
-    background: bool, //Background on when true
-    sprites: bool, //Sprites on when true
-    sprite_size: bool, //8x16 when true, 8x8 when false
-    bg_map: bool, //1 when true, 0 when false
-    bg_set: bool, //1 when true, 0 when false
-    window: bool, //Enabled when true
-    window_map: bool, //1 when true, 0 when false
-    display: bool, //On when true, Off when false
+    pub background: bool, //Background on when true
+    pub sprites: bool, //Sprites on when true
+    pub sprite_size: bool, //8x16 when true, 8x8 when false
+    pub bg_map: bool, //1 when true, 0 when false
+    pub bg_set: bool, //1 when true, 0 when false
+    pub window: bool, //Enabled when true
+    pub window_map: bool, //1 when true, 0 when false
+    pub display: bool, //On when true, Off when false
 }
 
 impl LCD_Control {

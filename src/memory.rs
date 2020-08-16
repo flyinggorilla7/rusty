@@ -19,6 +19,7 @@ pub struct Memory {
     pub vram: Vram,
     pub memory: [u8; 65536],
 }
+
 ///home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb
 impl Memory {
     pub fn new() -> Memory {
@@ -66,6 +67,7 @@ impl Memory {
     }
 
     pub fn write_byte(&mut self, address: u16, data: u8) {
+        self.memory[address as usize] = data;
         match address {
             0x0000..=0x7FFF => self.memory[address as usize] = data,
             0x8000..=0x9FFF => self.vram.write_byte(address, data),
@@ -74,103 +76,37 @@ impl Memory {
             0xFF44 => self.vram.scan_row = 0, //Writing to this register should always reset the row to zero
             0xFF4A => self.vram.window_y = data,
             0xFF4B => self.vram.window_x = data,
-
-
+            0xFF40 => self.update_lcd_control(),
+            _ => (),
         }
 
-
-
-
-        if (address < 0x8000) || (address > 0x9FFF) {
-            self.memory[address as usize] = data;
-        }
-        else {
-            self.vram.write_byte(address, data)
-        }
-        //println!("Wrote {:#x} to address {:#x}", data, address);
     }
 
-    //Check endianess, I think this one is good though
+    pub fn update_lcd_control(&self) {
+        let data = self.memory[0xFF40];
+        let bit_mask: u8 = 0b1000_0000;
+
+        self.vram.lcd_control.display = (data & bit_mask) > 0;
+        self.vram.lcd_control.window_map = (data & (bit_mask >> 1)) > 0;
+        self.vram.lcd_control.window = (data & (bit_mask >> 2)) > 0;
+        self.vram.lcd_control.bg_set = (data & (bit_mask >> 3)) > 0;
+        self.vram.lcd_control.bg_map = (data & (bit_mask >> 4)) > 0;
+        self.vram.lcd_control.sprite_size = (data & (bit_mask >> 5)) > 0;
+        self.vram.lcd_control.sprites = (data & (bit_mask >> 6)) > 0;
+        self.vram.lcd_control.background = (data & (bit_mask >> 7)) > 0;
+
+    }
+
     pub fn write_word(&mut self, address: u16, data: u16) {
         let upper: u8 = ((data & 0xFF00) >> 8) as u8;
         let lower: u8 = (data & 0x00FF) as u8;
-        if (address < 0x8000) || (address > 0x9FFF) {
-            self.memory[address as usize] = lower;
-            self.memory[(address+1) as usize] = upper;
-        }
-        else {
-            self.vram.write_byte(address, lower);
-            self.vram.write_byte(address+1, upper);
-        }
+        
+        self.write_byte(address, lower);
+        self.write_byte(address+1, upper);
         //println!("Wrote {:#x} to address {:#x}", lower, address);
         //println!("Wrote {:#x} to address {:#x}", upper, address+1);
 
     }
-
-    //0xFF40 - Bit 7
-    pub fn lcd_display_enable(&self) -> bool {
-        self.memory[0xFF40] & (1u8 << 7) != 0
-    }
-
-    //0xFF40 - Bit 6: false -> 9800, true -> 9C00
-    pub fn window_tile_display(&self) -> bool {
-        self.memory[0xFF40] & (1u8 << 6) != 0
-    }
-
-    //0xFF40 Bit 5: false -> window display disabled
-    pub fn window_display_enable(&self) -> bool {
-        self.memory[0xFF40] & (1u8 << 5) != 0
-    }
-
-    //0xFF40 Bit 4: false -> 8800-97FF selected
-    pub fn tile_data_select(&self) -> bool {
-        self.memory[0xFF40] & (1u8 << 4) != 0
-    }
-
-    //0xFF40 Bit 3: false -> 9800 - 9BFF
-    pub fn bg_tile_display(&self) -> bool {
-        self.memory[0xFF40] & (1u8 << 3) != 0
-    }
-
-    //0xFF40 Bit 2: false -> 8x8 sprites
-    pub fn sprite_size(&self) -> bool {
-        self.memory[0xFF40] & (1u8 << 2) != 0
-    }
-
-    //0xFF40 Bit 1: false -> sprite disabled
-    pub fn sprite_enable(&self) -> bool {
-        self.memory[0xFF40] & (1u8 << 1) != 0
-    }
-
-    //0xFF40 Bit 0: false -> BG display disabled
-    pub fn bg_display_enable(&self) -> bool {
-        self.memory[0xFF40] & (1u8 << 0) != 0
-    }
-
-    //Specifies position in BG pixels map to display at upper left
-    pub fn scrolly(&self) -> u8 {
-        self.memory[0xFF42]
-    }
-    pub fn scrollx(&self) -> u8 {
-        self.memory[0xFF43]
-    }
-
-    pub fn set_ly(&mut self, row: u8) {
-        self.write_byte(0xFF44, row);
-    }
-
-    pub fn ly(&self) -> u8 {
-        self.memory[0xFF44]
-    }
-
-    //Specifies position in Windows map to display at upper left
-    pub fn windowy(&self) -> u8 {
-        self.memory[0xFF4A]
-    }
-    pub fn windowx(&self) -> u8 {
-        self.memory[0xFF4B]
-    }
-
 
 }
 
@@ -178,24 +114,6 @@ impl Memory {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_lcd_display_enable() {
-        let mut memory = Memory::new();
-        memory.write_byte(0xFF40, 0xFF);
-        assert_eq!(memory.lcd_display_enable(), true);
-        memory.write_byte(0xFF40, 0x00);
-        assert_eq!(memory.lcd_display_enable(), false);
-    }
-    
-    #[test]
-    fn test_window_tile_map_display() {
-        let mut memory = Memory::new();
-        memory.write_byte(0xFF40, 0xFF);
-        assert_eq!(memory.window_tile_display(), true);
-        memory.write_byte(0xFF40, 0x00);
-        assert_eq!(memory.window_tile_display(), false);
-    }
 
     #[test]
     fn test_read_word() {
@@ -211,6 +129,15 @@ mod tests {
         memory.write_word(0x6FF0, 0xDCBA);
         assert_eq!(memory.memory[0x6FF0], 0xBA);
         assert_eq!(memory.memory[0x6FF1], 0xDC);
+    }
+
+    #[test]
+    fn test_lcd_control_update() {
+        let mut memory = Memory::new();
+        memory.write_byte(0xFF40, 0x82);
+        assert_eq!(memory.vram.lcd_control.display, true);
+        assert_eq!(memory.vram.lcd_control.window_map, false);
+        assert_eq!(memory.vram.lcd_control.sprites, true);
     }
 
 
