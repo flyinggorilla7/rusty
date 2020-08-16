@@ -44,6 +44,7 @@ impl Cpu {
         //Registers
         println!("Registers\nA: {:#04X}\t B: {:#04X}\t D: {:#04X}\t H: {:#04X}\t SP: {:#04X}\n", self.registers.a, self.registers.b, self.registers.d, self.registers.h, self.registers.sp);
         println!("F: {:#04X}\t C: {:#04X}\t E: {:#04X}\t L: {:#04X}\n", self.registers.f, self.registers.c, self.registers.e, self.registers.l);
+        println!("Current Scan Row: {}", self.memory.vram.scan_row);
         //Flags
         println!("Carry: {}\t Zero: {}\t Halfcarry: {}\t Add/Sub: {}\n\n", self.registers.check_carry(), self.registers.check_zero(), self.registers.check_halfcarry(), self.registers.check_addsub())
 
@@ -55,7 +56,7 @@ impl Cpu {
             memory: Memory::new(),
             halted: false,
             stopped: false,
-            interrupts_enabled: true,
+            interrupts_enabled: false,
 
             instructions: [(0x00, "NOP", 1), (0x01, "LD BC,d16", 3), (0x02, "LD (BC),A", 1),
             (0x03, "INC BC", 1), (0x04, "INC B", 1), (0x05, "DEC B", 1), (0x06, "LD B,d8", 2),
@@ -436,6 +437,21 @@ impl Cpu {
 
     
     pub fn cycle(&mut self) -> u8 {
+
+
+        if self.interrupts_enabled {
+
+            //Push current address to stack and go to vblank interrupt handler
+            if self.memory.vram.vblank_int {
+                self.push_word(self.registers.pc + 1);
+                self.registers.pc = 0x0040;
+            }
+            //Push current address to stack and go to lcd stat interrupt handler
+            else if self.memory.vram.lcd_stat_int {
+                self.push_word(self.registers.pc + 1);
+                self.registers.pc = 0x0048;
+            }
+        }
 
         let opcode = self.next_byte();
 
@@ -991,7 +1007,7 @@ impl Cpu {
 
     fn cb_decode(&mut self, opcode: u8) -> u8 {
 
-        //self.print_current_status(opcode, true);
+        self.print_current_status(opcode, true);
 
         let cycles = match opcode{
             //SWAP upper and lower nibbles of n

@@ -59,6 +59,11 @@ impl Memory {
 
 
     pub fn read_byte(&self, address: u16) -> u8 {
+
+        if self.bios_flag && (address < 0x100) {
+            return self.bios[address as usize]
+        }
+
         match address {
             0x0000..=0x7FFF => self.memory[address as usize],
             0x8000..=0x9FFF => self.vram.read_byte(address),
@@ -92,6 +97,7 @@ impl Memory {
             0xFF4A => self.vram.window_y = data,
             0xFF4B => self.vram.window_x = data,
             0xFF40 => self.update_lcd_control(),
+            0xFF45 => self.vram.lcd_stat = data,
             _ => (),
         }
 

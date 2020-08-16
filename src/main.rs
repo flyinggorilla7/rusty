@@ -70,6 +70,12 @@ pub fn emulate() {
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
         
+        if cpu.memory.bios_flag && (cpu.registers.pc == 0x100) {cpu.memory.bios_flag = false;}
+
+        if cpu.registers.pc == 0x000C {
+            println!("Finished Clearing VRAM");
+        }
+
         cpu.memory.vram.render_mode_cycles += cpu.cycle() as u32;
         cpu.memory.vram.step();
         //println!("Serial SB: {}", cpu.memory.read_byte(0xFF01));

@@ -48,9 +48,12 @@ pub struct Vram {
     pub window_y: u8, //0xFF4A
     pub window_x: u8, //0xFF4B
     pub scan_row: u8, //0xFF44
+    pub lcd_stat: u8, //0xFF45 Holds value that will interrupt when matched with scan_row
     pub background_palette: u8, //0xFF47
     pub pixel_buffer: [u8; (160*144*3) as usize],
     pub vblank_flag: bool, //Tells emulator loop to update texture
+    pub vblank_int: bool, //Interrupt flag for vblank
+    pub lcd_stat_int: bool //Interrupt flag for LCD stat register
 }
 
 pub struct LcdControl {
@@ -96,9 +99,12 @@ impl Vram {
             window_y: 0,
             window_x: 0,
             scan_row: 0,
+            lcd_stat: 0,
             background_palette: 0,
             pixel_buffer: [0; (160*144*3) as usize],
             vblank_flag: false,
+            vblank_int: false,
+            lcd_stat_int: false,
         }
 
     }
@@ -107,10 +113,18 @@ impl Vram {
 
     pub fn step(&mut self,) {
 
+        //Check for STAT interrupt
+        if self.scan_row == self.lcd_stat {self.lcd_stat_int = true;}
+
+
+        if self.scan_row == 144 {
+            println!("Max Scan Row");
+        }
         //All clock cycles divided by 4
         match self.render_mode {
             //H-Blank - CPU can access VRAM and OAM
             0 => {
+                self.vblank_int = false;
                 if self.render_mode_cycles >= 51 {
                     self.render_mode_cycles = 0;
                     self.scan_row += 1;
@@ -127,6 +141,7 @@ impl Vram {
 
             //V-Blank - CPU can access VRAM and OAM
             1 => {
+                self.vblank_int = true;
                 if self.render_mode_cycles >= 114 {
                     self.render_mode_cycles = 0;
                     self.scan_row += 1;
@@ -142,6 +157,7 @@ impl Vram {
 
             //LCD is reading OAM, CPU cannot access VRAM or OAM
             2 => {
+                self.vblank_int = false;
                 if self.render_mode_cycles >= 20 {
                     self.render_mode_cycles = 0;
                     self.render_mode = 3;
@@ -150,6 +166,7 @@ impl Vram {
 
             //LCD is reading OAM and VRAM, CPU cannot access VRAM, OAM, or Color Palette
             3 => {
+                self.vblank_int = false;
                 if self.render_mode_cycles >= 43 {
                     self.render_mode_cycles = 0;
                     self.render_mode = 0;
@@ -161,6 +178,9 @@ impl Vram {
 
             _ => {panic!("Invalid Render Mode!")}
         }
+
+        if self.scan_row == self.lcd_stat {self.lcd_stat_int = true;}
+
     }
 
     pub fn render_scan(&mut self) {
@@ -181,7 +201,7 @@ impl Vram {
             let row_offset = self.scan_row.wrapping_add(self.scroll_y);
 
             //Add tile
-            map_offset += (32 * (row_offset >> 3)) as u16;
+            map_offset += 32 * ((row_offset as u16 >> 3) as u16);
 
             //tile_pixel_y is the row of the current tile_being rendered
             let tile_pixel_y = row_offset & 0x07;
