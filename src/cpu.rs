@@ -439,7 +439,7 @@ impl Cpu {
 
         let opcode = self.next_byte();
 
-        //self.print_current_status(opcode, false);
+        self.print_current_status(opcode, false);
 
         let cycles: u8 = match opcode {
 

@@ -49,7 +49,8 @@ pub struct Vram {
     pub window_x: u8, //0xFF4B
     pub scan_row: u8, //0xFF44
     pub background_palette: u8, //0xFF47
-    pub pixel_buffer: [u8; (256*256*3) as usize],
+    pub pixel_buffer: [u8; (160*144*3) as usize],
+    pub vblank_flag: bool, //Tells emulator loop to update texture
 }
 
 pub struct LcdControl {
@@ -96,7 +97,8 @@ impl Vram {
             window_x: 0,
             scan_row: 0,
             background_palette: 0,
-            pixel_buffer: [0; (256*256*3) as usize],
+            pixel_buffer: [0; (160*144*3) as usize],
+            vblank_flag: false,
         }
 
     }
@@ -130,9 +132,10 @@ impl Vram {
                     self.scan_row += 1;
 
                     if self.scan_row == 154 {
+                        self.vblank_flag = true;
                         self.scan_row = 0;
                         self.render_mode = 2;
-                    } 
+                    }
                 }
 
             }
@@ -163,7 +166,7 @@ impl Vram {
     pub fn render_scan(&mut self) {
         if self.lcd_control.display {
 
-            let mut map_offset: u16 = 0;
+            let mut map_offset: u16;
 
             if self.lcd_control.bg_map {
                 map_offset = 0x1C00;
@@ -178,7 +181,7 @@ impl Vram {
             let row_offset = self.scan_row.wrapping_add(self.scroll_y);
 
             //Add tile
-            map_offset += (32 * row_offset) as u16;
+            map_offset += (32 * (row_offset >> 3)) as u16;
 
             //tile_pixel_y is the row of the current tile_being rendered
             let tile_pixel_y = row_offset & 0x07;
@@ -192,6 +195,7 @@ impl Vram {
 
             //Obtain index of next tile
             let mut tile_number: u16 = self.vram[(map_offset+line_offset as u16) as usize] as u16;
+
             //If second tile map is being used, indices are signed
             //Tile set is 384 Tiles
             if (self.lcd_control.bg_set) && (tile_number < 128) {
@@ -201,9 +205,9 @@ impl Vram {
             //Read tile from correct tile map
             let mut tile = self.tile_set[tile_number as usize];
 
-            let mut pixel_buffer_offset = self.scan_row * 160 * 3;
+            let mut pixel_buffer_offset: u32 = self.scan_row as u32 * 160 * 3;
 
-            for i in 0..160 {
+            for _i in 0..160 {
 
                 let color: u8 = match tile[tile_pixel_y as usize][tile_pixel_x as usize] {
                     PixelColor::Darkest => 0x00,
@@ -211,6 +215,7 @@ impl Vram {
                     PixelColor::Light => 0xB3,
                     PixelColor::Lightest => 0xFF,
                 };
+
                 self.pixel_buffer[pixel_buffer_offset as usize] = color;
                 self.pixel_buffer[(pixel_buffer_offset+1) as usize] = color;
                 self.pixel_buffer[(pixel_buffer_offset+2) as usize] = color;
@@ -227,6 +232,10 @@ impl Vram {
 
                     //Get new tile
                     tile_number = self.vram[(map_offset+line_offset as u16) as usize] as u16;
+                    if (self.lcd_control.bg_set) && tile_number < 128 {
+                        tile_number += 256;
+                    }
+
                     tile = self.tile_set[tile_number as usize];
                 }
             }

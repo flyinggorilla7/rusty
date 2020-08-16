@@ -18,11 +18,24 @@ pub struct Memory {
     pub rom: [u8; 0x8000],
     pub vram: Vram,
     pub memory: [u8; 65536],
+    pub bios: [u8; 0x100],
+    pub bios_flag: bool,
 }
 
 ///home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb
 impl Memory {
     pub fn new() -> Memory {
+
+        let bios_path = Path::new("/home/porkchop/programming/rust/rustyroms/gameboy.gb");
+        let bios_file = fs::read(bios_path).unwrap();
+        println!("Bios Length: {}", bios_file.len());
+        let mut bios_buffer: [u8; 0x100] = [0; 0x100];
+
+        for (index, instruction) in bios_file.iter().enumerate() {
+            let data = *instruction as u8;
+            bios_buffer[index] = data;
+        }
+
         let path = Path::new("/home/porkchop/programming/rust/rustyroms/drmario.gb");
         let file = fs::read(path).unwrap();
         println!("File Length: {}", file.len());
@@ -39,6 +52,8 @@ impl Memory {
             rom: [1u8; 0x8000],
             vram: Vram::new(),
             memory: buffer,
+            bios: bios_buffer,
+            bios_flag: true,
         }
     }
 

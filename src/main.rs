@@ -24,9 +24,7 @@ fn main() {
 }
 
 pub fn emulate() {
-    let row: u8 = 114;
     let mut cpu = cpu::Cpu::new();
-    let mut cycle_count: u32 = 0;    
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
     const GAME_WIDTH:u32 = 160;
@@ -42,7 +40,7 @@ pub fn emulate() {
         .expect("could not make into a canvas");
     let texture_creator = canvas.texture_creator();
     let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, 160, 144)
+        .create_texture_streaming(PixelFormatEnum::RGB24, GAME_WIDTH, GAME_HEIGHT)
         .expect("Failed to create texture target.");
     canvas.clear();
     canvas.copy(&texture, None, None).unwrap();
@@ -50,23 +48,24 @@ pub fn emulate() {
     canvas.present();
     let mut event_pump = sdl.event_pump().unwrap();
 
-            //Test for Tile Updates
-        cpu.memory.vram.write_byte(0x8010, 0xFF);
-        cpu.memory.vram.write_byte(0x8011, 0xFF);
-        cpu.memory.vram.write_byte(0x8012, 0xFF);
-        cpu.memory.vram.write_byte(0x8013, 0xFF);
-        cpu.memory.vram.write_byte(0x8014, 0xFF);
-        cpu.memory.vram.write_byte(0x8015, 0xFF);
-        cpu.memory.vram.write_byte(0x8016, 0xFF);
-        cpu.memory.vram.write_byte(0x8017, 0xFF);
-        cpu.memory.vram.write_byte(0x8018, 0xFF);
-        cpu.memory.vram.write_byte(0x8019, 0xFF);
-        cpu.memory.vram.write_byte(0x801A, 0xFF);
-        cpu.memory.vram.write_byte(0x801B, 0xFF);
-        cpu.memory.vram.write_byte(0x801C, 0xFF);
-        cpu.memory.vram.write_byte(0x801D, 0xFF);
-        cpu.memory.vram.write_byte(0x801E, 0xFF);
-        cpu.memory.vram.write_byte(0x801F, 0xFF);
+    /*//Test for Tile Updates
+    cpu.memory.vram.write_byte(0x8010, 0xFF);
+    cpu.memory.vram.write_byte(0x8011, 0xFF);
+    cpu.memory.vram.write_byte(0x8012, 0xFF);
+    cpu.memory.vram.write_byte(0x8013, 0xFF);
+    cpu.memory.vram.write_byte(0x8014, 0xFF);
+    cpu.memory.vram.write_byte(0x8015, 0xFF);
+    cpu.memory.vram.write_byte(0x8016, 0xFF);
+    cpu.memory.vram.write_byte(0x8017, 0xFF);
+    cpu.memory.vram.write_byte(0x8018, 0xFF);
+    cpu.memory.vram.write_byte(0x8019, 0xFF);
+    cpu.memory.vram.write_byte(0x801A, 0xFF);
+    cpu.memory.vram.write_byte(0x801B, 0xFF);
+    cpu.memory.vram.write_byte(0x801C, 0xFF);
+    cpu.memory.vram.write_byte(0x801D, 0xFF);
+    cpu.memory.vram.write_byte(0x801E, 0xFF);
+    cpu.memory.vram.write_byte(0x801F, 0xFF);
+    */
 
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
@@ -76,11 +75,13 @@ pub fn emulate() {
         //println!("Serial SB: {}", cpu.memory.read_byte(0xFF01));
         //println!("Serial SC: {}", cpu.memory.read_byte(0xFF02));
 
-
-        //Pitch is 160 Pixels * 3 bytes per Pixel * SCALE
-        texture.update(None, &cpu.memory.vram.pixel_buffer, 160 * 3).expect("Failed to update texture.");
-
-        canvas.copy(&texture, None, None).unwrap();
+        if cpu.memory.vram.vblank_flag {
+            cpu.memory.vram.vblank_flag = false;
+            //Pitch is 160 Pixels * 3 bytes per Pixel
+            println!("Screen Refreshed\n");
+            texture.update(None, &cpu.memory.vram.pixel_buffer, 160 * 3).expect("Failed to update texture.");
+            canvas.copy(&texture, None, None).unwrap();
+        }
 
         for event in event_pump.poll_iter() {
             match event {
