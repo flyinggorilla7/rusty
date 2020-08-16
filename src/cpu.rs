@@ -443,11 +443,15 @@ impl Cpu {
 
             //Push current address to stack and go to vblank interrupt handler
             if self.memory.vram.vblank_int {
+                self.interrupts_enabled = false;
+                self.memory.vram.vblank_int = false;
                 self.push_word(self.registers.pc + 1);
                 self.registers.pc = 0x0040;
             }
             //Push current address to stack and go to lcd stat interrupt handler
             else if self.memory.vram.lcd_stat_int {
+                self.interrupts_enabled = false;
+                self.memory.vram.lcd_stat_int = false;
                 self.push_word(self.registers.pc + 1);
                 self.registers.pc = 0x0048;
             }
