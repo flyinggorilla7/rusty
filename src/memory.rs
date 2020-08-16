@@ -82,7 +82,7 @@ impl Memory {
 
     }
 
-    pub fn update_lcd_control(&self) {
+    pub fn update_lcd_control(&mut self) {
         let data = self.memory[0xFF40];
         let bit_mask: u8 = 0b1000_0000;
 

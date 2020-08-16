@@ -41,18 +41,18 @@ pub struct Vram {
     tile_set: TileSet, 
     vram: [u8; 0x2000],
     render_mode: u8,
-    render_mode_cycles: u32,
-    pub lcd_control: LCD_Control, //0xFF40
+    pub render_mode_cycles: u32,
+    pub lcd_control: LcdControl, //0xFF40
     pub scroll_y: u8, //0xFF42
     pub scroll_x: u8, //0xFF43
     pub window_y: u8, //0xFF4A
     pub window_x: u8, //0xFF4B
     pub scan_row: u8, //0xFF44
     pub background_palette: u8, //0xFF47
-    pixel_buffer: [u8; (256*256*3) as usize],
+    pub pixel_buffer: [u8; (256*256*3) as usize],
 }
 
-pub struct LCD_Control {
+pub struct LcdControl {
     pub background: bool, //Background on when true
     pub sprites: bool, //Sprites on when true
     pub sprite_size: bool, //8x16 when true, 8x8 when false
@@ -63,9 +63,9 @@ pub struct LCD_Control {
     pub display: bool, //On when true, Off when false
 }
 
-impl LCD_Control {
-    pub fn new() -> LCD_Control {
-        LCD_Control {
+impl LcdControl {
+    pub fn new() -> LcdControl {
+        LcdControl {
             background: false,
             sprites: false,
             sprite_size: false,
@@ -89,7 +89,7 @@ impl Vram {
             vram: [0;0x2000],
             render_mode : 0,
             render_mode_cycles: 0,
-            lcd_control: LCD_Control::new(),
+            lcd_control: LcdControl::new(),
             scroll_y: 0,
             scroll_x: 0,
             window_y: 0,
@@ -163,7 +163,7 @@ impl Vram {
     pub fn render_scan(&mut self) {
         if self.lcd_control.display {
 
-            let map_offset: u16 = 0;
+            let mut map_offset: u16 = 0;
 
             if self.lcd_control.bg_map {
                 map_offset = 0x1C00;
@@ -175,17 +175,17 @@ impl Vram {
             //wrapping add
             //EX: scan_row = 0x05, scrolly = 0xFF
             //EX: tile_y = 0x04
-            let mut row_offset = self.scan_row.wrapping_add(self.scroll_y);
+            let row_offset = self.scan_row.wrapping_add(self.scroll_y);
 
             //Add tile
             map_offset += (32 * row_offset) as u16;
 
             //tile_pixel_y is the row of the current tile_being rendered
-            let mut tile_pixel_y = row_offset & 0x07;
+            let tile_pixel_y = row_offset & 0x07;
 
             //line_offset is where scan will start in row
             //this is equivalent to the tile position in the row
-            let line_offset = self.scroll_x >> 3;
+            let mut line_offset = self.scroll_x >> 3;
 
             //tile_pixel_x is the column of the current tile being rendered
             let mut tile_pixel_x = self.scroll_x & 0x07;
@@ -223,7 +223,7 @@ impl Vram {
                     tile_pixel_x = 0;
 
                     //Increase line offset by 1, wrap around to the beginning of the line if greater than 255
-                    line_offset.wrapping_add(1);
+                    line_offset = line_offset.wrapping_add(1);
 
                     //Get new tile
                     tile_number = self.vram[(map_offset+line_offset as u16) as usize] as u16;

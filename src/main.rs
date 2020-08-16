@@ -31,9 +31,8 @@ pub fn emulate() {
     let video = sdl.video().unwrap();
     const GAME_WIDTH:u32 = 160;
     const GAME_HEIGHT:u32 = 144;
-    const SCALE: u32 = 5;
     //Set this back to game_width and game_height
-    let window = video.window("Game", GAME_WIDTH*SCALE, GAME_HEIGHT*SCALE)
+    let window = video.window("Game", GAME_WIDTH, GAME_HEIGHT)
         .resizable()
         .maximized()
         .position_centered()
@@ -43,15 +42,13 @@ pub fn emulate() {
         .expect("could not make into a canvas");
     let texture_creator = canvas.texture_creator();
     let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, 256, 256)
+        .create_texture_streaming(PixelFormatEnum::RGB24, 160, 144)
         .expect("Failed to create texture target.");
     canvas.clear();
-    canvas.copy(&texture, None, Rect::new(0,0,256,256)).unwrap();
+    canvas.copy(&texture, None, None).unwrap();
 
     canvas.present();
     let mut event_pump = sdl.event_pump().unwrap();
-    //256 pixels * 256 pixels * 3 RGB values for each pixel
-    let mut pixel_buffer: [u8; (256*256*3) as usize] = [0; (256*256*3) as usize];
 
             //Test for Tile Updates
         cpu.memory.vram.write_byte(0x8010, 0xFF);
@@ -71,87 +68,19 @@ pub fn emulate() {
         cpu.memory.vram.write_byte(0x801E, 0xFF);
         cpu.memory.vram.write_byte(0x801F, 0xFF);
 
-        cpu.memory.vram.update_tile_map(0x1800, 0x01);
-        cpu.memory.vram.update_tile_map(0x1801, 0x01);
-        cpu.memory.vram.update_tile_map(0x1801, 0x01);
-        cpu.memory.vram.update_tile_map(0x1820, 0x01);
     //CPU cycles, it increments program counter and executes the next instruction
-    let mut old_cycle_count: u32;
     'running: loop {
-        //println!("Result: {}", 0x0Cu16.wrapping_add(0xFBu8 as i8 as u16));
-        old_cycle_count = cycle_count;
-        cycle_count += cpu.cycle() as u32;
-        if cpu.registers.pc == 0x0C {
-            println!("Finished Clearing VRAM");
-        }
+        
+        cpu.memory.vram.render_mode_cycles += cpu.cycle() as u32;
+        cpu.memory.vram.step();
         //println!("Serial SB: {}", cpu.memory.read_byte(0xFF01));
         //println!("Serial SC: {}", cpu.memory.read_byte(0xFF02));
 
-        //Tile map and Tile set update automatically when they are written to
-        //Pixel Buffer also needs to be updated
-        let mut index: u32 = 0;
-        /*println!("LCD Display Enable: {}",cpu.memory.lcd_display_enable());
-        println!("Tile Data Select: {}",cpu.memory.tile_data_select());
-        println!("Window Tile Display: {}",cpu.memory.window_tile_display());*/
 
-        for tile_offset in 0..=31 {
-            for tile_row in 0..=7 {
-                for tile in 0..=31 {
-                    for tile_col in 0..=7 {
-                        match cpu.memory.vram.tile_map1[tile_offset*32 + tile][tile_row][tile_col] {
-                            gpu::PixelColor::Lightest => {
-                                pixel_buffer[index as usize] = 0xFF;
-                                pixel_buffer[(index+1) as usize] = 0xFF;
-                                pixel_buffer[(index+2) as usize] = 0xFF;
-                            }
-                            gpu::PixelColor::Light => {
-                                pixel_buffer[index as usize] = 0xB3;
-                                pixel_buffer[(index+1) as usize] = 0xB3;
-                                pixel_buffer[(index+2) as usize] = 0xB3;
-                            }
-                            gpu::PixelColor::Dark => {
-                                pixel_buffer[index as usize] = 0x4D;
-                                pixel_buffer[(index+1) as usize] = 0x4D;
-                                pixel_buffer[(index+2) as usize] = 0x4D;
-                            }
-                            gpu::PixelColor::Darkest => {
-                                pixel_buffer[index as usize] = 0x00;
-                                pixel_buffer[(index + 1) as usize] = 0x00;
-                                pixel_buffer[(index + 2) as usize] = 0x00;
-                            }
-                        }
-                        index += 3;
-                    }
-                }
-            }
-        }
+        //Pitch is 160 Pixels * 3 bytes per Pixel * SCALE
+        texture.update(None, &cpu.memory.vram.pixel_buffer, 160 * 3).expect("Failed to update texture.");
 
-
-        //Update screen
-        let scrollx = cpu.memory.scrollx() as i32;
-        let scrolly = cpu.memory.scrolly() as i32;
-
-        //Pitch is 256 Pixels * 3 bytes per Pixel * SCALE
-        texture.update(None, &pixel_buffer, 256 * 3).expect("Failed to update texture.");
-
-        //Update Row Logic - Row Should update every 114 cycles
-        if cycle_count > 114 {
-            let mut scan_row = cpu.memory.ly() as i32;
-            if scan_row == 153 {
-                scan_row = 0;
-            }
-            if scan_row <= 144 {
-                canvas.copy(&texture, Rect::new(scrollx,scrolly + scan_row,GAME_WIDTH,1), Rect::new(0,scan_row,GAME_WIDTH,1)).unwrap();
-
-                //canvas.copy(&texture, Rect::new(scrollx,scrolly,GAME_WIDTH,GAME_HEIGHT), None).unwrap();
-            }
-            //println!("Scan Row");
-            cpu.memory.set_ly(scan_row as u8 + 1);
-            //cpu.memory.set_ly(scan_row as u8 + (cycle_count - old_cycle_count) as u8);
-            cycle_count = 0;
-        }
-
-        //canvas.copy(&texture, None, Rect::new(scrollx, scrolly,GAME_HEIGHT*SCALE,GAME_HEIGHT*SCALE)).unwrap();
+        canvas.copy(&texture, None, None).unwrap();
 
         for event in event_pump.poll_iter() {
             match event {
