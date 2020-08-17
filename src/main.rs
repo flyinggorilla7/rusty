@@ -48,11 +48,11 @@ pub fn emulate() {
     canvas.present();
     let mut event_pump = sdl.event_pump().unwrap();
 
-    /*//Test for Tile Updates
+    //Test for Tile Updates
     cpu.memory.vram.write_byte(0x8010, 0xFF);
-    cpu.memory.vram.write_byte(0x8011, 0xFF);
+    cpu.memory.vram.write_byte(0x8011, 0x00);
     cpu.memory.vram.write_byte(0x8012, 0xFF);
-    cpu.memory.vram.write_byte(0x8013, 0xFF);
+    cpu.memory.vram.write_byte(0x8013, 0x00);
     cpu.memory.vram.write_byte(0x8014, 0xFF);
     cpu.memory.vram.write_byte(0x8015, 0xFF);
     cpu.memory.vram.write_byte(0x8016, 0xFF);
@@ -65,7 +65,13 @@ pub fn emulate() {
     cpu.memory.vram.write_byte(0x801D, 0xFF);
     cpu.memory.vram.write_byte(0x801E, 0xFF);
     cpu.memory.vram.write_byte(0x801F, 0xFF);
-    */
+
+    cpu.memory.vram.write_byte(0x9800, 1);
+    cpu.memory.vram.write_byte(0x9801, 1);
+    cpu.memory.vram.write_byte(0x9802, 1);
+    cpu.memory.vram.write_byte(0x9818, 1);
+    cpu.memory.write_byte(0xFF40, 0x80);
+    
 
     //CPU cycles, it increments program counter and executes the next instruction
     'running: loop {
@@ -76,7 +82,17 @@ pub fn emulate() {
             println!("Finished Clearing VRAM");
         }
 
-        cpu.memory.vram.render_mode_cycles += cpu.cycle() as u32;
+        if cpu.registers.pc == 0x0040 {
+            println!("Finished compressing Nintendo logic");
+        }
+
+        if cpu.registers.pc == 0x00F9 {
+            println!("YOYOYO");
+            println!("Performing last checksum operation");
+        }
+
+        //cpu.memory.vram.render_mode_cycles += cpu.cycle() as u32;
+        cpu.memory.vram.render_mode_cycles += 4;
         cpu.memory.vram.step();
         //println!("Serial SB: {}", cpu.memory.read_byte(0xFF01));
         //println!("Serial SC: {}", cpu.memory.read_byte(0xFF02));
@@ -84,9 +100,11 @@ pub fn emulate() {
         if cpu.memory.vram.vblank_flag {
             cpu.memory.vram.vblank_flag = false;
             //Pitch is 160 Pixels * 3 bytes per Pixel
-            println!("Screen Refreshed\n");
+            println!("Scroll Value: {}", cpu.memory.vram.scroll_x);
+            cpu.memory.vram.scroll_x = cpu.memory.vram.scroll_x.wrapping_add(1);
             texture.update(None, &cpu.memory.vram.pixel_buffer, 160 * 3).expect("Failed to update texture.");
             canvas.copy(&texture, None, None).unwrap();
+            canvas.present();
         }
 
         for event in event_pump.poll_iter() {
@@ -99,7 +117,6 @@ pub fn emulate() {
             }
         }
 
-        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32/100));
-        canvas.present();
+        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32/10000));
     }
 }

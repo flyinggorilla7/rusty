@@ -459,7 +459,7 @@ impl Cpu {
 
         let opcode = self.next_byte();
 
-        self.print_current_status(opcode, false);
+        //self.print_current_status(opcode, false);
 
         let cycles: u8 = match opcode {
 
@@ -557,13 +557,13 @@ impl Cpu {
             //LD (C), A
             0xE2 => {self.memory.write_byte(0xFF00 + self.registers.c as u16, self.registers.a); 2},
             //LD A,(HLD)
-            0x3A => {self.registers.a = self.memory.read_byte(self.registers.hl()); self.registers.set_hl(self.registers.hl() - 1); 2},
+            0x3A => {self.registers.a = self.memory.read_byte(self.registers.hl()); self.registers.set_hl(self.registers.hl().wrapping_sub(1)); 2},
             //LD (HLD), A
-            0x32 => {self.memory.write_byte(self.registers.hl(), self.registers.a); self.registers.set_hl(self.registers.hl() - 1); 2},
+            0x32 => {self.memory.write_byte(self.registers.hl(), self.registers.a); self.registers.set_hl(self.registers.hl().wrapping_sub(1)); 2},
             //LD A, (HLI)
-            0x2A => {self.registers.a = self.memory.read_byte(self.registers.hl()); self.registers.set_hl(self.registers.hl() + 1); 2},
+            0x2A => {self.registers.a = self.memory.read_byte(self.registers.hl()); self.registers.set_hl(self.registers.hl().wrapping_add(1)); 2},
             //LD (HLI), A
-            0x22 => {self.memory.write_byte(self.registers.hl(), self.registers.a); self.registers.set_hl(self.registers.hl() + 1); 2},
+            0x22 => {self.memory.write_byte(self.registers.hl(), self.registers.a); self.registers.set_hl(self.registers.hl().wrapping_add(1)); 2},
             //LDH (n), A
             0xE0 => {let byte = self.next_byte(); self.memory.write_byte(0xFF00 + byte as u16, self.registers.a); 3},
             //LDH A, (n)
@@ -1011,7 +1011,7 @@ impl Cpu {
 
     fn cb_decode(&mut self, opcode: u8) -> u8 {
 
-        self.print_current_status(opcode, true);
+        //self.print_current_status(opcode, true);
 
         let cycles = match opcode{
             //SWAP upper and lower nibbles of n

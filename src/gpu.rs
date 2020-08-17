@@ -114,12 +114,15 @@ impl Vram {
     pub fn step(&mut self,) {
 
         //Check for STAT interrupt
-        if self.scan_row == self.lcd_stat {self.lcd_stat_int = true;}
-
-
-        if self.scan_row == 144 {
-            println!("Max Scan Row");
+        if self.scan_row == self.lcd_stat {
+            self.lcd_stat_int = true;
         }
+        else {
+            self.lcd_stat_int = false;
+        }
+
+        self.vblank_int = false;
+
         //All clock cycles divided by 4
         match self.render_mode {
             //H-Blank - CPU can access VRAM and OAM
