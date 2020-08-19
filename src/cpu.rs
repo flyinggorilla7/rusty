@@ -704,7 +704,7 @@ impl Cpu {
             0x0B => {self.registers.set_bc(self.registers.bc()-1); 2},
             0x1B => {self.registers.set_de(self.registers.de()-1); 2},
             0x2B => {self.registers.set_hl(self.registers.hl()-1); 2},
-            0x3B => {self.registers.sp -= 1; 2},
+            0x3B => {self.registers.sp = self.registers.sp.wrapping_sub(1); 2},
             //Decimal adjust register A
             0x27 => {self.registers.check_halfcarry(); self.registers.check_addsub(); 1}, //Implement
             //CPL Register A

@@ -69,6 +69,7 @@ pub fn emulate() {
     cpu.memory.vram.write_byte(0x9800, 1);
     cpu.memory.vram.write_byte(0x9801, 1);
     cpu.memory.vram.write_byte(0x9802, 1);
+    cpu.memory.vram.write_byte(0x9810, 1);
     cpu.memory.vram.write_byte(0x9818, 1);
     cpu.memory.write_byte(0xFF40, 0x80);
     
@@ -78,7 +79,7 @@ pub fn emulate() {
         
         if cpu.memory.bios_flag && (cpu.registers.pc == 0x100) {cpu.memory.bios_flag = false;}
 
-        if cpu.registers.pc == 0x000C {
+        /*if cpu.registers.pc == 0x000C {
             println!("Finished Clearing VRAM");
         }
 
@@ -89,7 +90,7 @@ pub fn emulate() {
         if cpu.registers.pc == 0x00F9 {
             println!("YOYOYO");
             println!("Performing last checksum operation");
-        }
+        }*/
 
         //cpu.memory.vram.render_mode_cycles += cpu.cycle() as u32;
         cpu.memory.vram.render_mode_cycles += 4;
@@ -100,7 +101,7 @@ pub fn emulate() {
         if cpu.memory.vram.vblank_flag {
             cpu.memory.vram.vblank_flag = false;
             //Pitch is 160 Pixels * 3 bytes per Pixel
-            println!("Scroll Value: {}", cpu.memory.vram.scroll_x);
+            //println!("Scroll Value: {}", cpu.memory.vram.scroll_x);
             cpu.memory.vram.scroll_x = cpu.memory.vram.scroll_x.wrapping_add(1);
             texture.update(None, &cpu.memory.vram.pixel_buffer, 160 * 3).expect("Failed to update texture.");
             canvas.copy(&texture, None, None).unwrap();
@@ -117,6 +118,6 @@ pub fn emulate() {
             }
         }
 
-        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32/10000));
+        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32/1000000));
     }
 }

@@ -186,6 +186,7 @@ impl Vram {
 
     }
 
+    //Fix this so that wrapping works correctly
     pub fn render_scan(&mut self) {
         if self.lcd_control.display {
 
@@ -203,9 +204,11 @@ impl Vram {
             //EX: tile_y = 0x04
             let row_offset = self.scan_row.wrapping_add(self.scroll_y);
 
-            //Add tile
+            //Current Row In Tile Map
             map_offset += 32 * ((row_offset as u16 >> 3) as u16);
-
+            
+            //Next Row In Tile Map
+            let map_edge: u16 = map_offset + 32;
             //tile_pixel_y is the row of the current tile_being rendered
             let tile_pixel_y = row_offset & 0x07;
 
@@ -252,6 +255,11 @@ impl Vram {
 
                     //Increase line offset by 1, wrap around to the beginning of the line if greater than 255
                     line_offset = line_offset.wrapping_add(1);
+
+                    //Reset line_offset if the scroll needs to wrap around
+                    if map_edge == map_offset + line_offset as u16 {
+                        line_offset = 0;
+                    }
 
                     //Get new tile
                     tile_number = self.vram[(map_offset+line_offset as u16) as usize] as u16;
