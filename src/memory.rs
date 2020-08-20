@@ -36,7 +36,7 @@ impl Memory {
             bios_buffer[index] = data;
         }
 
-        let path = Path::new("/home/porkchop/programming/rust/rustyroms/drmario.gb");
+        let path = Path::new("/home/porkchop/programming/rust/rustyroms/tetris.gb");
         let file = fs::read(path).unwrap();
         println!("File Length: {}", file.len());
         let mut buffer: [u8; 65536] = [0; 65536];
@@ -53,7 +53,7 @@ impl Memory {
             vram: Vram::new(),
             memory: buffer,
             bios: bios_buffer,
-            bios_flag: true,
+            bios_flag: false,
         }
     }
 
@@ -90,9 +90,6 @@ impl Memory {
         self.write_byte(0xFF4A, 0x00); //WY
         self.write_byte(0xFF4B, 0x00); //WX
         self.write_byte(0xFFFF, 0x00); //IE
-
-
-
     }
 
 

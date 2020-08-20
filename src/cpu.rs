@@ -21,6 +21,46 @@ pub struct Cpu  {
 
 impl Cpu {
 
+    fn print_disassembly(&self) {
+        let cb: bool = false;
+        let data: bool = false;
+        let counter: u16 = 0;
+        while counter < 0x8000 {
+            let hex = self.memory.memory[counter];
+            if cb {
+                let cb_tuple = self.cb_instructions[hex as usize];
+                let cb_neumonic = cb_tuple.1;
+                let cb_opcode = cb_tuple.0;
+                println!("Program Counter: {:#04X}\t Opcode: CB {:#02X}\t Neumonic {}\n", counter-1, cb_opcode, cb_neumonic);
+                cb = false;
+                counter += 1;
+                continue
+            }
+            let tuple = self.instructions[hex as usize];
+            let length = tuple.2;
+            let neumonic = tuple.1;
+            let opcode = tuple.0;
+            if neumonic == "PREFIX CB" {
+                cb = true;
+                counter += 1;
+                continue
+            }
+
+            if length == 2 {
+                println!("Program Counter: {:#04X}\t Opcode: {:#02X}\t Neumonic {}\t ${:#04X}\n", counter, opcode, neumonic, self.memory.memory[counter+1]); 
+                counter += 2;
+            }
+            else if length == 3 {
+                let 
+                println!("Program Counter: {:#04X}\t Opcode: {:#02X}\t Neumonic {}\t ${:#04X}\n", counter, opcode, neumonic, self.memory.memory[counter+1]); 
+
+            }
+        }
+            println!("Program Counter: {:#04X}\t Opcode: {:#02X}\t Neumonic {}\t ")
+
+        }
+    }
+
     fn print_current_status(&self, opcode: u8, cb: bool) {
         let neumonic: &str;
         if cb {
@@ -651,8 +691,8 @@ impl Cpu {
             0xB6 => {self.or(self.memory.read_byte(self.registers.hl())); 2},
             0xF6 => {let byte = self.next_byte(); self.or(byte); 2},
             //8 bit XOR
-            0xAF => {self.xor(self.registers.b); 1},
-            0xA8 => {self.xor(self.registers.a); 1},
+            0xAF => {self.xor(self.registers.a); 1},
+            0xA8 => {self.xor(self.registers.b); 1},
             0xA9 => {self.xor(self.registers.c); 1},
             0xAA => {self.xor(self.registers.d); 1},
             0xAB => {self.xor(self.registers.e); 1},
