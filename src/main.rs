@@ -25,6 +25,7 @@ fn main() {
 
 pub fn emulate() {
     let mut cpu = cpu::Cpu::new();
+    cpu.memory.memory_setup();
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
     const GAME_WIDTH:u32 = 160;
@@ -49,7 +50,7 @@ pub fn emulate() {
     let mut event_pump = sdl.event_pump().unwrap();
 
     //Test for Tile Updates
-    cpu.memory.vram.write_byte(0x8010, 0xFF);
+    /*cpu.memory.vram.write_byte(0x8010, 0xFF);
     cpu.memory.vram.write_byte(0x8011, 0x00);
     cpu.memory.vram.write_byte(0x8012, 0xFF);
     cpu.memory.vram.write_byte(0x8013, 0x00);
@@ -71,7 +72,7 @@ pub fn emulate() {
     cpu.memory.vram.write_byte(0x9802, 1);
     cpu.memory.vram.write_byte(0x9810, 1);
     cpu.memory.vram.write_byte(0x9818, 1);
-    cpu.memory.write_byte(0xFF40, 0x80);
+    cpu.memory.write_byte(0xFF40, 0x80);*/
     
 
     //CPU cycles, it increments program counter and executes the next instruction
@@ -92,8 +93,8 @@ pub fn emulate() {
             println!("Performing last checksum operation");
         }*/
 
-        //cpu.memory.vram.render_mode_cycles += cpu.cycle() as u32;
-        cpu.memory.vram.render_mode_cycles += 4;
+        cpu.memory.vram.render_mode_cycles += cpu.cycle() as u32;
+        //cpu.memory.vram.render_mode_cycles += 4;
         cpu.memory.vram.step();
         //println!("Serial SB: {}", cpu.memory.read_byte(0xFF01));
         //println!("Serial SC: {}", cpu.memory.read_byte(0xFF02));

@@ -57,6 +57,44 @@ impl Memory {
         }
     }
 
+    //Initialize registers to post bootrom values
+    pub fn memory_setup(&mut self) {
+        self.write_byte(0xFF05, 0x00); //TIMA
+        self.write_byte(0xFF06, 0x00); //TMA
+        self.write_byte(0xFF07, 0x00); //TAC
+        self.write_byte(0xFF10, 0x80); //NR10
+        self.write_byte(0xFF11, 0xBF); //NR11
+        self.write_byte(0xFF12, 0xF3); //NR12
+        self.write_byte(0xFF14, 0xBF); //NR14
+        self.write_byte(0xFF16, 0x3F); //NR21
+        self.write_byte(0xFF17, 0x00); //NR22
+        self.write_byte(0xFF19, 0xBF); //NR24
+        self.write_byte(0xFF1A, 0x7F); //NR30
+        self.write_byte(0xFF1B, 0xFF); //NR31
+        self.write_byte(0xFF1C, 0x9F); //NR32
+        self.write_byte(0xFF1E, 0xBF); //NR33
+        self.write_byte(0xFF20, 0xFF); //NR41
+        self.write_byte(0xFF21, 0x00); //NR42
+        self.write_byte(0xFF22, 0x00); //NR43
+        self.write_byte(0xFF23, 0xBF); //NR30
+        self.write_byte(0xFF24, 0x77); //NR50
+        self.write_byte(0xFF25, 0xF3); //NR51
+        self.write_byte(0xFF26, 0xF1); //NR52 -0xF0 for Super Gameboy
+        self.write_byte(0xFF40, 0x91); //LCDC
+        self.write_byte(0xFF42, 0x00); //SCY
+        self.write_byte(0xFF43, 0x00); //SCX
+        self.write_byte(0xFF45, 0x00); //LYC
+        self.write_byte(0xFF47, 0xFC); //BGP
+        self.write_byte(0xFF48, 0xFF); //OBP0
+        self.write_byte(0xFF49, 0xFF); //OBP1
+        self.write_byte(0xFF4A, 0x00); //WY
+        self.write_byte(0xFF4B, 0x00); //WX
+        self.write_byte(0xFFFF, 0x00); //IE
+
+
+
+    }
+
 
     pub fn read_byte(&self, address: u16) -> u8 {
 

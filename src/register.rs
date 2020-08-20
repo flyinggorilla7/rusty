@@ -14,17 +14,17 @@ pub struct Registers {
 impl Registers {
     pub fn new() -> Registers {
         Registers {
-            a: 0x00,
+            a: 0x01,
             b: 0x00,
-            c: 0x00,
+            c: 0x13,
             d: 0x00,
-            e: 0x00,
-            f: 0x00,
-            h: 0x00,
-            l: 0x00,
+            e: 0xD8,
+            f: 0xB0,
+            h: 0x01,
+            l: 0x4D,
             //Make sure to put pc back to 100
-            pc: 0x0000,
-            sp: 0x0000,
+            pc: 0x0100,
+            sp: 0xFFFE,
         }
     }
 
