@@ -9,10 +9,19 @@ use std::time::Duration;
 use sdl2::rect::Rect;
 use std::env;
 
+use std::io;
+
 mod cpu;
 mod register;
 mod memory;
 mod gpu;
+
+pub struct DebugMode {
+    pub run: bool,  //Run until breakpoint
+    pub step: bool, //Cycle through each step and poll for input each time
+    pub is_breakpoint: bool, //Tells Input Checker that second token should be u16 address
+    pub breakpoints: Vec<u16>,   //Vector containing all breakpoints
+}
 
 
 
@@ -20,10 +29,80 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     println!("Args: {:?}", args);
 
-    emulate();
+    let mut da: bool = false;
+    let mut debug: bool = false;
+
+    for arg in args {
+        
+        if arg == "da" {
+            da = true;
+        }
+        else if arg == "debug" {
+            debug = true;
+        }
+        else if arg == "help" {
+            println!("Print a helpful message");
+        }
+
+    }
+
+    if da {
+        disassembly();
+    }
+    else {
+        emulate(debug);
+    }
 }
 
-pub fn emulate() {
+pub fn disassembly() {
+    let mut cpu = cpu::Cpu::new();
+    cpu.memory.memory_setup();
+
+    cpu.print_disassembly();
+}
+
+pub fn get_debug_input(debug_mode: &mut DebugMode) {
+
+    //Use Cases for Debug Mode
+    //r - run until next break point
+    //s - step by one cpu cycle
+    //b a16 - set break point at specified 16 bit address (Format of 0xABCD)
+    //printbreak - printt list of all break points
+
+    loop {
+        let mut user_input = String::new();
+
+        io::stdin().read_line(&mut user_input).unwrap();
+
+        let mut iter = user_input.split_ascii_whitespace();
+
+        debug_mode.is_breakpoint = false;
+        match iter.next().unwrap() {
+            "r" => {debug_mode.run = true; return},
+            "s" => {debug_mode.step = true; return},
+            "b" => debug_mode.is_breakpoint = true,
+            "printbreak" => {
+                for breakpoint in debug_mode.breakpoints.iter().as_ref() {
+                    println!("{:#04X}", *breakpoint);
+                }
+            
+            }
+            _ => panic!("Invalid Debug Command"),
+        };
+
+        if debug_mode.is_breakpoint {
+            //Get Breakpoint Address and Add to Breakpoint Vector if not already there
+            let  address = iter.next().expect("Invalid Debug Command. \"b\" command should be followed with u16 address");
+            let  address: u16 = address.parse().expect("Invalid address type");
+            if debug_mode.breakpoints.contains(&address) {
+                debug_mode.breakpoints.push(address);
+                println!("Breakpoint set at Address {:#04X}\n", address);
+            }
+        }
+    }
+}
+
+pub fn emulate(debug: bool) {
     let mut cpu = cpu::Cpu::new();
     cpu.memory.memory_setup();
     let sdl = sdl2::init().unwrap();
@@ -48,6 +127,13 @@ pub fn emulate() {
 
     canvas.present();
     let mut event_pump = sdl.event_pump().unwrap();
+
+    let mut debug_mode = DebugMode {
+        run: false,
+        step: false,
+        is_breakpoint: false,
+        breakpoints: Vec::new(),
+    };
 
     //Test for Tile Updates
     /*cpu.memory.vram.write_byte(0x8010, 0xFF);
@@ -79,19 +165,11 @@ pub fn emulate() {
     'running: loop {
         
         if cpu.memory.bios_flag && (cpu.registers.pc == 0x100) {cpu.memory.bios_flag = false;}
+        
+        if debug {
 
-        /*if cpu.registers.pc == 0x000C {
-            println!("Finished Clearing VRAM");
         }
 
-        if cpu.registers.pc == 0x0040 {
-            println!("Finished compressing Nintendo logic");
-        }
-
-        if cpu.registers.pc == 0x00F9 {
-            println!("YOYOYO");
-            println!("Performing last checksum operation");
-        }*/
 
         cpu.memory.vram.render_mode_cycles += cpu.cycle() as u32;
         //cpu.memory.vram.render_mode_cycles += 4;

@@ -1,5 +1,8 @@
 use crate::register::Registers;
 use crate::memory::Memory;
+use std::fs::File;
+use std::io::LineWriter;
+use std::io::prelude::*;
 
 
 
@@ -21,17 +24,23 @@ pub struct Cpu  {
 
 impl Cpu {
 
-    fn print_disassembly(&self) {
-        let cb: bool = false;
-        let data: bool = false;
-        let counter: u16 = 0;
+    pub fn print_disassembly(&self) {
+        let mut cb: bool = false;
+        let mut counter: u16 = 0;
+
+        let disassembled = File::create("disassembled.txt").unwrap();
+        let mut writer = LineWriter::new(disassembled);
+
+        let mut line: String;
+
         while counter < 0x8000 {
-            let hex = self.memory.memory[counter];
+            let hex = self.memory.memory[counter as usize];
             if cb {
                 let cb_tuple = self.cb_instructions[hex as usize];
                 let cb_neumonic = cb_tuple.1;
                 let cb_opcode = cb_tuple.0;
-                println!("Program Counter: {:#04X}\t Opcode: CB {:#02X}\t Neumonic {}\n", counter-1, cb_opcode, cb_neumonic);
+                line = format!("PC: {:#04X}\t Op: CB {:#02X}\t {}\n", counter-1, cb_opcode, cb_neumonic);
+                writer.write_all(line.as_bytes()).unwrap();
                 cb = false;
                 counter += 1;
                 continue
@@ -47,18 +56,23 @@ impl Cpu {
             }
 
             if length == 2 {
-                println!("Program Counter: {:#04X}\t Opcode: {:#02X}\t Neumonic {}\t ${:#04X}\n", counter, opcode, neumonic, self.memory.memory[counter+1]); 
+                line = format!("PC: {:#04X}\t Op: {:#02X}\t {}\t ${:#04X}\n", counter, opcode, neumonic, self.memory.memory[(counter+1) as usize]); 
                 counter += 2;
             }
             else if length == 3 {
-                let 
-                println!("Program Counter: {:#04X}\t Opcode: {:#02X}\t Neumonic {}\t ${:#04X}\n", counter, opcode, neumonic, self.memory.memory[counter+1]); 
-
+                let lower = self.memory.memory[(counter+1) as usize];
+                let upper = self.memory.memory[(counter+2) as usize];
+                line = format!("PC: {:#04X}\t Op: {:#02X}\t {}\t ${:#04X}\n", counter, opcode, neumonic, (upper as u16) << 8 | lower as u16); 
+                counter += 3;
             }
+            else {
+                line = format!("PC: {:#04X}\t Op: {:#02X}\t {}\n", counter, opcode, neumonic);
+                counter += 1;
+            }
+            writer.write_all(line.as_bytes()).unwrap();
         }
-            println!("Program Counter: {:#04X}\t Opcode: {:#02X}\t Neumonic {}\t ")
+        writer.flush().unwrap();
 
-        }
     }
 
     fn print_current_status(&self, opcode: u8, cb: bool) {
