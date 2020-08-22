@@ -127,6 +127,7 @@ impl Memory {
         match address {
             0x0000..=0x7FFF => self.memory[address as usize] = data,
             0x8000..=0x9FFF => self.vram.write_byte(address, data),
+            0xFF00 => {self.memory[0xFF00] |= 0x0F} //Reset input buttons to unpressed state when input state changes
             0xFF42 => self.vram.scroll_y = data,
             0xFF43 => self.vram.scroll_x = data,
             0xFF44 => self.vram.scan_row = 0, //Writing to this register should always reset the row to zero
@@ -137,6 +138,12 @@ impl Memory {
             _ => (),
         }
 
+    }
+
+    //returns true if bit 4 is zero/input is set to direction
+    pub fn input_status(&mut self) -> bool {
+        let input_reg = self.read_byte(0xFF00);
+        (input_reg & 0b0001_0000) == 0
     }
 
     pub fn update_lcd_control(&mut self) {
