@@ -513,7 +513,7 @@ impl Cpu {
 
         let opcode = self.next_byte();
 
-        //self.print_current_status(opcode, false);
+        self.print_current_status(opcode, false);
 
         let cycles: u8 = match opcode {
 
@@ -1065,7 +1065,7 @@ impl Cpu {
 
     fn cb_decode(&mut self, opcode: u8) -> u8 {
 
-        //self.print_current_status(opcode, true);
+        self.print_current_status(opcode, true);
 
         let cycles = match opcode{
             //SWAP upper and lower nibbles of n

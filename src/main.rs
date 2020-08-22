@@ -4,9 +4,7 @@ extern crate sdl2;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::render::{Canvas, CanvasBuilder};
-use std::time::Duration;
-use sdl2::rect::Rect;
+//use std::time::Duration;
 use std::env;
 
 use std::io;
@@ -19,6 +17,7 @@ mod gpu;
 pub struct DebugMode {
     pub run: bool,  //Run until breakpoint
     pub step: bool, //Cycle through each step and poll for input each time
+    pub reset: bool, //Resets program counter to 0x100
     pub is_breakpoint: bool, //Tells Input Checker that second token should be u16 address
     pub breakpoints: Vec<u16>,   //Vector containing all breakpoints
 }
@@ -41,7 +40,7 @@ fn main() {
             debug = true;
         }
         else if arg == "help" {
-            println!("Print a helpful message");
+            println!("da - print rom disassembly to file, debug - run emulator in debug mode");
         }
 
     }
@@ -50,7 +49,13 @@ fn main() {
         disassembly();
     }
     else {
-        emulate(debug);
+        loop {
+            let reset: bool = emulate(debug);
+            println!("{}", reset);
+            if !reset {
+                return
+            }
+        }
     }
 }
 
@@ -72,37 +77,56 @@ pub fn get_debug_input(debug_mode: &mut DebugMode) {
     loop {
         let mut user_input = String::new();
 
+        println!("Please enter debug command. Type help for a list of commands.");
         io::stdin().read_line(&mut user_input).unwrap();
 
         let mut iter = user_input.split_ascii_whitespace();
 
+        debug_mode.run = false;
+        debug_mode.step = false;
         debug_mode.is_breakpoint = false;
-        match iter.next().unwrap() {
+        debug_mode.reset = false;
+
+        let next_input;
+        match iter.next() {
+            Some(input) => next_input = input,
+            None => {println!("No input entered"); continue},
+        };
+        match next_input {
+            "reset" => {debug_mode.reset = true; return},
             "r" => {debug_mode.run = true; return},
             "s" => {debug_mode.step = true; return},
             "b" => debug_mode.is_breakpoint = true,
+            "help" => println!("r - run, s - step, b 0xABCD - set breakpoint at address ABCD, printbreak - print list of breakpoints, reset - reset at 0x0100\n"),
             "printbreak" => {
                 for breakpoint in debug_mode.breakpoints.iter().as_ref() {
                     println!("{:#04X}", *breakpoint);
                 }
             
             }
-            _ => panic!("Invalid Debug Command"),
+            _ => {println!("Invalid Debug Command, Type help for list of commands."); continue},
         };
-
         if debug_mode.is_breakpoint {
             //Get Breakpoint Address and Add to Breakpoint Vector if not already there
-            let  address = iter.next().expect("Invalid Debug Command. \"b\" command should be followed with u16 address");
-            let  address: u16 = address.parse().expect("Invalid address type");
-            if debug_mode.breakpoints.contains(&address) {
-                debug_mode.breakpoints.push(address);
-                println!("Breakpoint set at Address {:#04X}\n", address);
+            let address = iter.next().expect("Invalid Debug Command. \"b\" command should be followed with u16 address").trim_start_matches("0x");
+            let hex_address: u16;
+            match u16::from_str_radix(address,16) {
+                Ok(hex_value) => hex_address = hex_value,
+                Err(_error) => {println!("Invalid Address. Enter address in format of 0xABCD."); continue},
+            };
+
+            if !debug_mode.breakpoints.contains(&hex_address) {
+                debug_mode.breakpoints.push(hex_address);
+                println!("Breakpoint set at Address {:#04X}\n", hex_address);
+            }
+            else {
+                println!("Breakpoint already set at Address {:#04X}\n", hex_address);
             }
         }
     }
 }
 
-pub fn emulate(debug: bool) {
+pub fn emulate(debug: bool) -> bool {
     let mut cpu = cpu::Cpu::new();
     cpu.memory.memory_setup();
     let sdl = sdl2::init().unwrap();
@@ -131,6 +155,7 @@ pub fn emulate(debug: bool) {
     let mut debug_mode = DebugMode {
         run: false,
         step: false,
+        reset: false,
         is_breakpoint: false,
         breakpoints: Vec::new(),
     };
@@ -166,7 +191,21 @@ pub fn emulate(debug: bool) {
         
         if cpu.memory.bios_flag && (cpu.registers.pc == 0x100) {cpu.memory.bios_flag = false;}
         
+        println!("Debug Mode Reset {}", debug_mode.reset);
         if debug {
+            if debug_mode.breakpoints.contains(&cpu.registers.pc) {
+                println!("Breakpoint At {:#04X} Reached.", cpu.registers.pc);
+                get_debug_input(&mut debug_mode);
+            }
+            else if debug_mode.reset {
+                return true
+            }
+            else if debug_mode.step {
+                get_debug_input(&mut debug_mode);
+            }
+            else if !debug_mode.run {
+                get_debug_input(&mut debug_mode);
+            }
 
         }
 
@@ -199,4 +238,5 @@ pub fn emulate(debug: bool) {
 
         //::std::thread::sleep(Duration::new(0, 1_000_000_000u32/1000000));
     }
+    return false;
 }
