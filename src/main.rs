@@ -226,13 +226,91 @@ pub fn emulate(debug: bool) -> bool {
             canvas.present();
         }
 
+        //true - direction/bit 4 = 0
+        let input_status = cpu.memory.input_status();
+
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} |
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running
                 }
+
                 _ => {},
+            }
+            if input_status {
+                match event {
+                    //Up
+                    Event::KeyDown { keycode: Some(Keycode::Up), .. } => {
+
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::Up), .. } => {
+
+                    }
+
+                    //Down
+                    Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
+
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::Down), .. } => {
+
+                    }
+
+                    //Left
+                    Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
+
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::Left), .. } => {
+
+                    }
+
+                    //Right
+                    Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
+
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::Right), .. } => {
+
+                    }
+
+                    _ => {}
+                }
+            }
+            else {
+                match event {
+                    //T - Start
+                    Event::KeyDown { keycode: Some(Keycode::T), .. } => {
+
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::T), .. } => {
+
+                    }
+
+                    //Y - Select
+                    Event::KeyDown { keycode: Some(Keycode::Y), .. } => {
+
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::Y), .. } => {
+
+                    }
+
+                    //S - Button B
+                    Event::KeyDown { keycode: Some(Keycode::S), .. } => {
+
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::S), .. } => {
+
+                    }
+
+                    //A - Button A
+                    Event::KeyDown { keycode: Some(Keycode::A), .. } => {
+
+                    }
+                    Event::KeyUp { keycode: Some(Keycode::A), .. } => {
+
+                    }
+
+                    _ => {}               
+                }
             }
         }
 

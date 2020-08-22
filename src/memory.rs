@@ -59,6 +59,7 @@ impl Memory {
 
     //Initialize registers to post bootrom values
     pub fn memory_setup(&mut self) {
+        self.write_byte(0xFF00, 0xFF); //Joypad Input Register
         self.write_byte(0xFF05, 0x00); //TIMA
         self.write_byte(0xFF06, 0x00); //TMA
         self.write_byte(0xFF07, 0x00); //TAC
