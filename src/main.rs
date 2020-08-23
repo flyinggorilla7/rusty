@@ -236,7 +236,7 @@ pub fn emulate(debug: bool) -> bool {
             cpu.memory.vram.vblank_flag = false;
             //Pitch is 160 Pixels * 3 bytes per Pixel
             //println!("Scroll Value: {}", cpu.memory.vram.scroll_x);
-            cpu.memory.vram.scroll_x = cpu.memory.vram.scroll_x.wrapping_add(1);
+            //cpu.memory.vram.scroll_x = cpu.memory.vram.scroll_x.wrapping_add(1);
             texture.update(None, &cpu.memory.vram.pixel_buffer, 160 * 3).expect("Failed to update texture.");
             canvas.copy(&texture, None, None).unwrap();
             canvas.present();

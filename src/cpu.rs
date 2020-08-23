@@ -28,8 +28,11 @@ impl Cpu {
     pub fn print_disassembly(&self) {
         let mut cb: bool = false;
         let mut counter: u16 = 0;
-
-        let disassembled = File::create("disassembled.txt").unwrap();
+        /*match fs::remove_file("~/home/porkchop/programming/rust/rusty/target/debug/disassembled.txt") {
+            Ok(_) => {},
+            Err(_) => {},
+        };*/
+        let disassembled = File::create("/home/porkchop/programming/rust/rusty/target/debug/disassembled.txt").unwrap();
         let mut writer = LineWriter::new(disassembled);
 
         let mut line: String;
@@ -80,7 +83,7 @@ impl Cpu {
         let neumonic: &str;
         if cb {
             neumonic = self.cb_instructions[opcode as usize].1;
-            println!("Program Counter: {:#06X}\t Next Opcode: {:#02X}\t Neumonic {}\t $\n", self.registers.pc - 1, opcode, neumonic);
+            println!("Program Counter: {:#06X}\t Next Opcode: {:#02X}\t Neumonic {}\t $\n", self.registers.pc - 1, opcode, neumonic)
         }
         else {
             neumonic = self.instructions[opcode as usize].1;
@@ -794,44 +797,44 @@ impl Cpu {
             //JP nn
             0xC3 => {self.registers.pc = self.next_word(); 3},
             //JP to nn if coniditon is true
-            0xC2 => {if !self.registers.check_zero(){self.registers.pc = self.next_word()}; 3},
-            0xCA => {if self.registers.check_zero(){self.registers.pc = self.next_word()}; 3},
-            0xD2 => {if !self.registers.check_carry(){self.registers.pc = self.next_word()}; 3},
-            0xDA => {if self.registers.check_carry(){self.registers.pc = self.next_word()}; 3},
+            0xC2 => {if !self.registers.check_zero() {self.registers.pc = self.next_word(); 4} else {self.registers.pc += 2; 3}},
+            0xCA => {if self.registers.check_zero() {self.registers.pc = self.next_word(); 4} else {self.registers.pc += 2; 3}},
+            0xD2 => {if !self.registers.check_carry() {self.registers.pc = self.next_word(); 4} else {self.registers.pc += 2; 3}},
+            0xDA => {if self.registers.check_carry() {self.registers.pc = self.next_word(); 4} else {self.registers.pc += 2; 3}},
             //JP to address contained in HL
             0xE9 => {self.registers.pc = self.registers.hl(); 1},
             //JR n - add n to current address and jump to it
             0x18 => {let jump = self.next_byte() as i8; self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 2},
             //JR cc,n - add n to current address and jump if flag is set
-            0x20 => {let jump = self.next_byte() as i8; if !self.registers.check_zero(){self.registers.pc = self.registers.pc.wrapping_add(jump as u16)}; 2},
-            0x28 => {let jump = self.next_byte() as i8; if self.registers.check_zero(){self.registers.pc = self.registers.pc.wrapping_add(jump as u16)}; 2},
-            0x30 => {let jump = self.next_byte() as i8; if !self.registers.check_carry(){self.registers.pc = self.registers.pc.wrapping_add(jump as u16)}; 2},
-            0x38 => {let jump = self.next_byte() as i8; if self.registers.check_carry(){self.registers.pc = self.registers.pc.wrapping_add(jump as u16)}; 2},
+            0x20 => {let jump = self.next_byte() as i8; if !self.registers.check_zero() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {self.registers.pc += 1; 2}},
+            0x28 => {let jump = self.next_byte() as i8; if self.registers.check_zero() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {self.registers.pc += 1; 2}},
+            0x30 => {let jump = self.next_byte() as i8; if !self.registers.check_carry() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {self.registers.pc += 1; 2}},
+            0x38 => {let jump = self.next_byte() as i8; if self.registers.check_carry() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {self.registers.pc += 1; 2}},
             //Calls
             //Call nn, push address of next instruction onto stack, then jump to nn
             //Not sure about this one
-            0xCD => {self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); 3},
+            0xCD => {self.push_word(self.registers.pc + 2); self.registers.pc = self.next_word(); 6},
             //Call nn if condition is true
-            0xC4 => {if !self.registers.check_zero(){self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); } 3},
-            0xCC => {if self.registers.check_zero(){self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); } 3},
-            0xD4 => {if !self.registers.check_carry(){self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); } 3},
-            0xDC => {if self.registers.check_carry(){self.push_word(self.registers.pc + 1); self.registers.pc = self.next_word(); } 3},
+            0xCC => {if self.registers.check_zero() {self.push_word(self.registers.pc + 2); self.registers.pc = self.next_word(); 6} else {self.registers.pc += 2; 3}},
+            0xD4 => {if !self.registers.check_carry() {self.push_word(self.registers.pc + 2); self.registers.pc = self.next_word(); 6} else {self.registers.pc += 2; 3}},
+            0xC4 => {if !self.registers.check_zero() {self.push_word(self.registers.pc + 2); self.registers.pc = self.next_word(); 6} else {self.registers.pc += 2; 3}},
+            0xDC => {if self.registers.check_carry() {self.push_word(self.registers.pc + 2); self.registers.pc = self.next_word(); 6} else {self.registers.pc += 2; 3}},
             //Restarts - push present address to stack, jump to $0000 + x
-            0xC7 => {self.push_word(self.registers.pc); self.registers.pc = 0x00; 8},
-            0xCF => {self.push_word(self.registers.pc); self.registers.pc = 0x08; 8},
-            0xD7 => {self.push_word(self.registers.pc); self.registers.pc = 0x10; 8},
-            0xDF => {self.push_word(self.registers.pc); self.registers.pc = 0x18; 8},
-            0xE7 => {self.push_word(self.registers.pc); self.registers.pc = 0x20; 8},
-            0xEF => {self.push_word(self.registers.pc); self.registers.pc = 0x28; 8},
-            0xF7 => {self.push_word(self.registers.pc); self.registers.pc = 0x30; 8},
-            0xFF => {self.push_word(self.registers.pc); self.registers.pc = 0x38; 8},
+            0xC7 => {self.push_word(self.registers.pc); self.registers.pc = 0x00; 4},
+            0xCF => {self.push_word(self.registers.pc); self.registers.pc = 0x08; 4},
+            0xD7 => {self.push_word(self.registers.pc); self.registers.pc = 0x10; 4},
+            0xDF => {self.push_word(self.registers.pc); self.registers.pc = 0x18; 4},
+            0xE7 => {self.push_word(self.registers.pc); self.registers.pc = 0x20; 4},
+            0xEF => {self.push_word(self.registers.pc); self.registers.pc = 0x28; 4},
+            0xF7 => {self.push_word(self.registers.pc); self.registers.pc = 0x30; 4},
+            0xFF => {self.push_word(self.registers.pc); self.registers.pc = 0x38; 4},
             //RET 
-            0xC9 => {self.registers.pc = self.pop_word(); 2},
+            0xC9 => {self.registers.pc = self.pop_word(); 4},
             //RET cc
-            0xC0 => {if !self.registers.check_zero(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 2},
-            0xC8 => {if self.registers.check_zero(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 2},
-            0xD0 => {if !self.registers.check_carry(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 2},
-            0xD8 => {if self.registers.check_carry(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 2},
+            0xC0 => {if !self.registers.check_zero(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 4},
+            0xC8 => {if self.registers.check_zero(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 4},
+            0xD0 => {if !self.registers.check_carry(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 4},
+            0xD8 => {if self.registers.check_carry(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 4},
             //RETI - pop two bytes and jump to address, enable interrupts
             0xD9 => {self.registers.pc = self.pop_word(); self.interrupts_enabled = true; 2},
             //CB
@@ -1394,6 +1397,14 @@ mod tests {
         cpu.registers.a = 0x0D;
         cpu.xor(0x0D);
         assert_eq!(cpu.registers.a, 0x00);
+    }
+
+    #[test]
+    fn ret_test() {
+        //0xC9 is return
+
+        let mut cpu = Cpu::new();
+        cpu.cycle()
     }
 
 }
