@@ -1,0 +1,4 @@
+Implement support for joypad input interrupt.
+Add additional commands to debugger.
+Possibly think about converting cpu switch statement into array of function pointers.
+

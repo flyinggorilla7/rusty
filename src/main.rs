@@ -92,12 +92,14 @@ pub fn get_debug_input(debug_mode: &mut DebugMode) {
             Some(input) => next_input = input,
             None => {println!("No input entered"); continue},
         };
+        let mut break_type: &str = "";
         match next_input {
             "reset" => {debug_mode.reset = true; return},
             "r" => {debug_mode.run = true; return},
             "s" => {debug_mode.step = true; return},
-            "b" => debug_mode.is_breakpoint = true,
-            "help" => println!("r - run, s - step, b 0xABCD - set breakpoint at address ABCD, printbreak - print list of breakpoints, reset - reset at 0x0100\n"),
+            "b" => {break_type = "b"; debug_mode.is_breakpoint = true},
+            "cb" => {break_type = "cb"; debug_mode.is_breakpoint = true},
+            "help" => println!("r - run, s - step, b 0xABCD - set breakpoint at address ABCD, cb 0xABCD - clear breakpoint at address ABCD, printbreak - print list of breakpoints, reset - reset at 0x0100\n"),
             "printbreak" => {
                 for breakpoint in debug_mode.breakpoints.iter().as_ref() {
                     println!("{:#04X}", *breakpoint);
@@ -114,13 +116,24 @@ pub fn get_debug_input(debug_mode: &mut DebugMode) {
                 Ok(hex_value) => hex_address = hex_value,
                 Err(_error) => {println!("Invalid Address. Enter address in format of 0xABCD."); continue},
             };
-
-            if !debug_mode.breakpoints.contains(&hex_address) {
-                debug_mode.breakpoints.push(hex_address);
-                println!("Breakpoint set at Address {:#04X}\n", hex_address);
+            if break_type == "b" {
+                if !debug_mode.breakpoints.contains(&hex_address) {
+                    debug_mode.breakpoints.push(hex_address);
+                    println!("Breakpoint set at Address {:#04X}\n", hex_address);
+                }
+                else {
+                    println!("Breakpoint already set at Address {:#04X}\n", hex_address);
+                }
             }
             else {
-                println!("Breakpoint already set at Address {:#04X}\n", hex_address);
+                if !debug_mode.breakpoints.contains(&hex_address) {
+                    println!("Breakpoint at Address {:#04X} cannot be removed since it was never set.\n", hex_address);
+                }
+                else {
+                    let index = debug_mode.breakpoints.binary_search(&hex_address).unwrap();
+                    debug_mode.breakpoints.remove(index);
+                    println!("Breakpoint removed at Address {:#04X}\n", hex_address);
+                }
             }
         }
     }
@@ -191,19 +204,22 @@ pub fn emulate(debug: bool) -> bool {
         
         if cpu.memory.bios_flag && (cpu.registers.pc == 0x100) {cpu.memory.bios_flag = false;}
         
-        println!("Debug Mode Reset {}", debug_mode.reset);
+        cpu.debug = false;
         if debug {
             if debug_mode.breakpoints.contains(&cpu.registers.pc) {
                 println!("Breakpoint At {:#04X} Reached.", cpu.registers.pc);
+                cpu.debug = true;
                 get_debug_input(&mut debug_mode);
             }
             else if debug_mode.reset {
                 return true
             }
             else if debug_mode.step {
+                cpu.debug = true;
                 get_debug_input(&mut debug_mode);
             }
             else if !debug_mode.run {
+                cpu.debug = true;
                 get_debug_input(&mut debug_mode);
             }
 

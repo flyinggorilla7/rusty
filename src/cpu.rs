@@ -13,6 +13,7 @@ pub struct Cpu  {
     pub halted: bool,
     pub stopped: bool,
     pub interrupts_enabled: bool,
+    pub debug: bool,
     
     //Opcode, Neumonic, Instruction Length
     pub instructions: [(u8, &'static str, u8); 256],
@@ -111,6 +112,7 @@ impl Cpu {
             halted: false,
             stopped: false,
             interrupts_enabled: false,
+            debug: false,
 
             instructions: [(0x00, "NOP", 1), (0x01, "LD BC,d16", 3), (0x02, "LD (BC),A", 1),
             (0x03, "INC BC", 1), (0x04, "INC B", 1), (0x05, "DEC B", 1), (0x06, "LD B,d8", 2),
@@ -513,7 +515,9 @@ impl Cpu {
 
         let opcode = self.next_byte();
 
-        self.print_current_status(opcode, false);
+        if self.debug {
+            self.print_current_status(opcode, false);
+        }
 
         let cycles: u8 = match opcode {
 
@@ -1065,7 +1069,9 @@ impl Cpu {
 
     fn cb_decode(&mut self, opcode: u8) -> u8 {
 
-        self.print_current_status(opcode, true);
+        if self.debug {
+            self.print_current_status(opcode, true);
+        }
 
         let cycles = match opcode{
             //SWAP upper and lower nibbles of n
