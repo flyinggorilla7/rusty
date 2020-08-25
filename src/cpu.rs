@@ -848,6 +848,16 @@ impl Cpu {
     }
 
     fn rrca(&mut self) {
+        let new_carry = self.registers.a & 1u8;
+        self.registers.a = self.registers.a >> 1;
+        self.registers.a |= new_carry << 7;
+        self.registers.set_zero(0);
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+    }
+
+    fn rra(&mut self) {
         let old_carry: u8 = if self.registers.check_carry() {
             1u8
         }
@@ -863,81 +873,23 @@ impl Cpu {
         self.registers.set_addsub(0);
     }
 
-    fn rra(&mut self) {
-        let new_carry = self.registers.a & 1u8;
-        self.registers.a = self.registers.a >> 1;
-        self.registers.a |= new_carry << 7;
-        self.registers.set_zero(0);
-        self.registers.set_carry(new_carry);
-        self.registers.set_halfcarry(0);
-        self.registers.set_addsub(0);
-    }
-
-    fn rlca(&mut self) {
-        let old_carry: u8 = if self.registers.check_carry() {
-            1u8
-        }
-        else {
-            0u8
-        };
-        let new_carry = (self.registers.a & (1u8 << 7)) >> 7;
-        self.registers.a = self.registers.a << 1;
-        self.registers.a |= old_carry;
-        self.registers.set_zero(0);
-        self.registers.set_carry(new_carry);
-        self.registers.set_halfcarry(0);
-        self.registers.set_addsub(0);
-    }
-
-    fn rla(&mut self) {
-        let new_carry = self.registers.a & (1u8 << 7) >> 7;
-        self.registers.a = self.registers.a << 1;
-        self.registers.a |= new_carry;
-        self.registers.set_zero(0);
-        self.registers.set_carry(new_carry);
-        self.registers.set_halfcarry(0);
-        self.registers.set_addsub(0);
-    }
-
-    fn rlc(&mut self, mut data: u8) -> u8 {
-        let old_carry: u8 = if self.registers.check_carry() {
-            1u8
-        }
-        else {
-            0u8
-        };
-        let new_carry = data & (1u8 << 7) >> 7;
-        data = data << 1;
-        data |= old_carry;
-        if data == 0 {
-            self.registers.set_zero(1);
-        }
-        else {
-            self.registers.set_zero(0);
-        }
-        self.registers.set_carry(new_carry);
-        self.registers.set_halfcarry(0);
-        self.registers.set_addsub(0);
-        data
-    }
-
-    fn rl(&mut self, mut data: u8) -> u8 {
-        let new_carry = data & (1u8 << 7) >> 7;
-        data = data << 1;
-        data |= new_carry;
-        if data == 0 {
-            self.registers.set_zero(1);
-        }
-        else {
-            self.registers.set_zero(0);
-        }
-        self.registers.set_carry(new_carry);
-        self.registers.set_halfcarry(0);
-        self.registers.set_addsub(0);
-        data
-    }
-
     fn rrc(&mut self, mut data: u8) -> u8 {
+        let new_carry = data & 1u8;
+        data = data >> 1;
+        data |= new_carry << 7;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+        data
+    }
+
+    fn rr(&mut self, mut data: u8) -> u8 {
         let old_carry: u8 = if self.registers.check_carry() {
             1u8
         }
@@ -959,10 +911,36 @@ impl Cpu {
         data
     }
 
-    fn rr(&mut self, mut data: u8) -> u8 {
-        let new_carry = data & 1u8;
-        data = data >> 1;
-        data |= new_carry >> 7;
+    fn rlca(&mut self) {
+        let new_carry = (self.registers.a & (1u8 << 7)) >> 7;
+        self.registers.a = self.registers.a << 1;
+        self.registers.a |= new_carry;
+        self.registers.set_zero(0);
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+    }
+
+    fn rla(&mut self) {
+        let old_carry: u8 = if self.registers.check_carry() {
+            1u8
+        }
+        else {
+            0u8
+        };
+        let new_carry = self.registers.a & (1u8 << 7) >> 7;
+        self.registers.a = self.registers.a << 1;
+        self.registers.a |= old_carry;
+        self.registers.set_zero(0);
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+    }
+
+    fn rlc(&mut self, mut data: u8) -> u8 {
+        let new_carry = data & (1u8 << 7) >> 7;
+        data = data << 1;
+        data |= new_carry;
         if data == 0 {
             self.registers.set_zero(1);
         }
@@ -975,7 +953,27 @@ impl Cpu {
         data
     }
 
-
+    fn rl(&mut self, mut data: u8) -> u8 {
+        let old_carry: u8 = if self.registers.check_carry() {
+            1u8
+        }
+        else {
+            0u8
+        };
+        let new_carry = data & (1u8 << 7) >> 7;
+        data = data << 1;
+        data |= old_carry;
+        if data == 0 {
+            self.registers.set_zero(1);
+        }
+        else {
+            self.registers.set_zero(0);
+        }
+        self.registers.set_carry(new_carry);
+        self.registers.set_halfcarry(0);
+        self.registers.set_addsub(0);
+        data
+    }
 
     //set carry flag
     fn scf(&mut self) {
