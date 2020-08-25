@@ -14,14 +14,14 @@ pub struct Registers {
 impl Registers {
     pub fn new() -> Registers {
         Registers {
-            a: 0x01,
+            a: 0x11,
             b: 0x00,
-            c: 0x13,
-            d: 0x00,
-            e: 0xD8,
-            f: 0xB0,
-            h: 0x01,
-            l: 0x4D,
+            c: 0x00,
+            d: 0xFF,
+            e: 0x56,
+            f: 0x80,
+            h: 0x00,
+            l: 0x0D,
             //Make sure to put pc back to 100
             pc: 0x0100,
             sp: 0xFFFE,
@@ -34,7 +34,7 @@ impl Registers {
 
     pub fn set_af(&mut self, data: u16) {
         self.a = ((data & 0xFF00) >> 8) as u8;
-        self.c = (data & 0x00FF) as u8;
+        self.f = (data & 0x00FF) as u8;
     }
 
     pub fn bc(&self) -> u16 {

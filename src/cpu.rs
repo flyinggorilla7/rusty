@@ -88,6 +88,7 @@ impl Cpu {
         else {
             neumonic = self.instructions[opcode as usize].1;
             let length = self.instructions[opcode as usize].2;
+            println!("C000: {:#06X}", self.memory.read_byte(0xC000));
             if length == 2 {
                 println!("Program Counter: {:#06X}\t Next Opcode: {:#02X}\t Neumonic {}\t ${:#04X}\n", self.registers.pc - 1,opcode, neumonic, self.memory.read_byte(self.registers.pc));
             }
@@ -417,6 +418,7 @@ impl Cpu {
         else {
             self.registers.set_zero(0);
         }
+        self.registers.set_addsub(1);
     }
 
     //INC, check for zero and half-carry flag
@@ -806,10 +808,10 @@ impl Cpu {
             //JR n - add n to current address and jump to it
             0x18 => {let jump = self.next_byte() as i8; self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 2},
             //JR cc,n - add n to current address and jump if flag is set
-            0x20 => {let jump = self.next_byte() as i8; if !self.registers.check_zero() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {self.registers.pc += 1; 2}},
-            0x28 => {let jump = self.next_byte() as i8; if self.registers.check_zero() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {self.registers.pc += 1; 2}},
-            0x30 => {let jump = self.next_byte() as i8; if !self.registers.check_carry() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {self.registers.pc += 1; 2}},
-            0x38 => {let jump = self.next_byte() as i8; if self.registers.check_carry() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {self.registers.pc += 1; 2}},
+            0x20 => {let jump = self.next_byte() as i8; if !self.registers.check_zero() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {2}},
+            0x28 => {let jump = self.next_byte() as i8; if self.registers.check_zero() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {2}},
+            0x30 => {let jump = self.next_byte() as i8; if !self.registers.check_carry() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {2}},
+            0x38 => {let jump = self.next_byte() as i8; if self.registers.check_carry() {self.registers.pc = self.registers.pc.wrapping_add(jump as u16); 3} else {2}},
             //Calls
             //Call nn, push address of next instruction onto stack, then jump to nn
             //Not sure about this one
@@ -831,10 +833,10 @@ impl Cpu {
             //RET 
             0xC9 => {self.registers.pc = self.pop_word(); 4},
             //RET cc
-            0xC0 => {if !self.registers.check_zero(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 4},
-            0xC8 => {if self.registers.check_zero(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 4},
-            0xD0 => {if !self.registers.check_carry(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 4},
-            0xD8 => {if self.registers.check_carry(){self.registers.pc = self.pop_word(); self.registers.pc = self.next_word(); } 4},
+            0xC0 => {if !self.registers.check_zero() {self.registers.pc = self.pop_word(); 5} else {2}},
+            0xC8 => {if self.registers.check_zero() {self.registers.pc = self.pop_word(); 5} else {2}},
+            0xD0 => {if !self.registers.check_carry() {self.registers.pc = self.pop_word(); 5} else {2}},
+            0xD8 => {if self.registers.check_carry() {self.registers.pc = self.pop_word(); 5} else {2}},
             //RETI - pop two bytes and jump to address, enable interrupts
             0xD9 => {self.registers.pc = self.pop_word(); self.interrupts_enabled = true; 2},
             //CB
@@ -959,8 +961,8 @@ impl Cpu {
 
     fn rr(&mut self, mut data: u8) -> u8 {
         let new_carry = data & 1u8;
-        data = data << 1;
-        data |= new_carry << 7;
+        data = data >> 1;
+        data |= new_carry >> 7;
         if data == 0 {
             self.registers.set_zero(1);
         }
@@ -1404,7 +1406,7 @@ mod tests {
         //0xC9 is return
 
         let mut cpu = Cpu::new();
-        cpu.cycle()
+        //cpu.cycle()
     }
 
 }

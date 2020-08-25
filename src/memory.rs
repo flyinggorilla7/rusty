@@ -36,7 +36,7 @@ impl Memory {
             bios_buffer[index] = data;
         }
 
-        let path = Path::new("/home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/10-bit_ops.gb");
+        let path = Path::new("/home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb");
         let file = fs::read(path).unwrap();
         println!("File Length: {}", file.len());
         let mut buffer: [u8; 65536] = [0; 65536];
@@ -129,10 +129,13 @@ impl Memory {
             0x8000..=0x9FFF => self.vram.write_byte(address, data),
             0xFF00 => {self.memory[0xFF00] |= 0x0F} //Reset input buttons to unpressed state when input state changes
             //Temporary for Blaarg's Cpu tests
-            0xFF02 => {   //Serial Transfer Control
-                if data == 0x81 {
-                    println!("Wrote character to serial");
-                }
+            0xFF01 => {   //Serial Transfer Control
+                print!("{}", data as char);
+                /*if data == 0x81 {
+                    //println!("Wrote character to serial");
+                    let result = self.memory[0xFF01];
+                    print!("{:#04X}", result);
+                }*/
             }
             0xFF42 => self.vram.scroll_y = data,
             0xFF43 => self.vram.scroll_x = data,

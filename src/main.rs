@@ -90,7 +90,7 @@ pub fn get_debug_input(debug_mode: &mut DebugMode) {
         let next_input;
         match iter.next() {
             Some(input) => next_input = input,
-            None => {println!("No input entered"); continue},
+            None => {debug_mode.step = true; return},
         };
         let mut break_type: &str = "";
         match next_input {
