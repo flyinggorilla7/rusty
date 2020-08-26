@@ -137,6 +137,21 @@ impl Memory {
                     print!("{:#04X}", result);
                 }*/
             }
+            0xFF0F => {
+                if data & 0x01 > 0 {
+                    self.vram.vblank_int_request = true;
+                }
+                else {
+                    self.vram.vblank_int_request = false;
+                }
+                if data & 0x02 > 0 {
+                    self.vram.lcd_stat_int_request = true;
+                }
+                else {
+                    self.vram.lcd_stat_int_request = false;
+                }
+                //Fix interrupts
+            },
             0xFF42 => self.vram.scroll_y = data,
             0xFF43 => self.vram.scroll_x = data,
             0xFF44 => self.vram.scan_row = 0, //Writing to this register should always reset the row to zero
@@ -144,6 +159,20 @@ impl Memory {
             0xFF4B => self.vram.window_x = data,
             0xFF40 => self.update_lcd_control(),
             0xFF45 => self.vram.lcd_stat = data,
+            0xFFFF => {
+                if data & 0x01 > 0 {
+                    self.vram.vblank_int_enable = true;
+                }
+                else {
+                    self.vram.vblank_int_enable = false;
+                }
+                if data & 0x02 > 0 {
+                    self.vram.lcd_stat_int_enable = true;
+                }
+                else {
+                    self.vram.lcd_stat_int_enable = false;
+                }
+            }
             _ => (),
         }
 

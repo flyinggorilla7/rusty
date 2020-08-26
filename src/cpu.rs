@@ -103,7 +103,8 @@ impl Cpu {
         //Registers
         println!("Registers\nA: {:#04X}\t B: {:#04X}\t D: {:#04X}\t H: {:#04X}\t SP: {:#04X}\n", self.registers.a, self.registers.b, self.registers.d, self.registers.h, self.registers.sp);
         println!("F: {:#04X}\t C: {:#04X}\t E: {:#04X}\t L: {:#04X}\n", self.registers.f, self.registers.c, self.registers.e, self.registers.l);
-        println!("Current Scan Row: {}", self.memory.vram.scan_row);
+        println!("Current Scan Row: {}\t IME: {}\t LCDC: {:#04X}\t {:#04X}", self.memory.vram.scan_row,self.interrupts_enabled,self.memory.read_byte(0xFF40), self.memory.read_byte(0xFF41));
+        println!("Int Enable {:#04X}\t Int Flag {:#04X}", self.memory.read_byte(0xFFFF), self.memory.read_byte(0xFF0F));
         //Flags
         println!("Carry: {}\t Zero: {}\t Halfcarry: {}\t Add/Sub: {}\n\n", self.registers.check_carry(), self.registers.check_zero(), self.registers.check_halfcarry(), self.registers.check_addsub())
 
@@ -503,16 +504,16 @@ impl Cpu {
         if self.interrupts_enabled {
 
             //Push current address to stack and go to vblank interrupt handler
-            if self.memory.vram.vblank_int {
+            if self.memory.vram.vblank_int_enable && self.memory.vram.vblank_int_request {
                 self.interrupts_enabled = false;
-                self.memory.vram.vblank_int = false;
+                self.memory.vram.vblank_int_request = false;
                 self.push_word(self.registers.pc + 1);
                 self.registers.pc = 0x0040;
             }
             //Push current address to stack and go to lcd stat interrupt handler
-            else if self.memory.vram.lcd_stat_int {
+            else if self.memory.vram.lcd_stat_int_enable && self.memory.vram.lcd_stat_int_request {
                 self.interrupts_enabled = false;
-                self.memory.vram.lcd_stat_int = false;
+                self.memory.vram.lcd_stat_int_request = false;
                 self.push_word(self.registers.pc + 1);
                 self.registers.pc = 0x0048;
             }
@@ -838,7 +839,7 @@ impl Cpu {
             0xD0 => {if !self.registers.check_carry() {self.registers.pc = self.pop_word(); 5} else {2}},
             0xD8 => {if self.registers.check_carry() {self.registers.pc = self.pop_word(); 5} else {2}},
             //RETI - pop two bytes and jump to address, enable interrupts
-            0xD9 => {self.registers.pc = self.pop_word(); self.interrupts_enabled = true; 2},
+            0xD9 => {self.registers.pc = self.pop_word(); self.interrupts_enabled = true; 4},
             //CB
             //CHECK CYCLES FOR THIS ONE
             0xCB => {let byte = self.next_byte(); self.cb_decode(byte) + 1},

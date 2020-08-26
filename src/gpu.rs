@@ -52,8 +52,10 @@ pub struct Vram {
     pub background_palette: u8, //0xFF47
     pub pixel_buffer: [u8; (160*144*3) as usize],
     pub vblank_flag: bool, //Tells emulator loop to update texture
-    pub vblank_int: bool, //Interrupt flag for vblank
-    pub lcd_stat_int: bool //Interrupt flag for LCD stat register
+    pub vblank_int_enable: bool, //Interrupt enable for vblank
+    pub vblank_int_request: bool, //Interrupt Request for vblank
+    pub lcd_stat_int_enable: bool, //Interrupt enable for LCD stat
+    pub lcd_stat_int_request: bool //Interrupt request for LCD stat 
 }
 
 pub struct LcdControl {
@@ -103,8 +105,10 @@ impl Vram {
             background_palette: 0,
             pixel_buffer: [0; (160*144*3) as usize],
             vblank_flag: false,
-            vblank_int: false,
-            lcd_stat_int: false,
+            vblank_int_enable: false,
+            vblank_int_request: false,
+            lcd_stat_int_enable: false,
+            lcd_stat_int_request: false,
         }
 
     }
@@ -115,19 +119,19 @@ impl Vram {
 
         //Check for STAT interrupt
         if self.scan_row == self.lcd_stat {
-            self.lcd_stat_int = true;
+            self.lcd_stat_int_request = true;
         }
         else {
-            self.lcd_stat_int = false;
+            self.lcd_stat_int_request = false;
         }
 
-        self.vblank_int = false;
+        self.vblank_int_request = false;
 
         //All clock cycles divided by 4
         match self.render_mode {
             //H-Blank - CPU can access VRAM and OAM
             0 => {
-                self.vblank_int = false;
+                self.vblank_int_request = false;
                 if self.render_mode_cycles >= 51 {
                     self.render_mode_cycles = 0;
                     self.scan_row += 1;
@@ -144,7 +148,7 @@ impl Vram {
 
             //V-Blank - CPU can access VRAM and OAM
             1 => {
-                self.vblank_int = true;
+                self.vblank_int_request = true;
                 if self.render_mode_cycles >= 114 {
                     self.render_mode_cycles = 0;
                     self.scan_row += 1;
@@ -160,7 +164,7 @@ impl Vram {
 
             //LCD is reading OAM, CPU cannot access VRAM or OAM
             2 => {
-                self.vblank_int = false;
+                self.vblank_int_request = false;
                 if self.render_mode_cycles >= 20 {
                     self.render_mode_cycles = 0;
                     self.render_mode = 3;
@@ -169,7 +173,7 @@ impl Vram {
 
             //LCD is reading OAM and VRAM, CPU cannot access VRAM, OAM, or Color Palette
             3 => {
-                self.vblank_int = false;
+                self.vblank_int_request = false;
                 if self.render_mode_cycles >= 43 {
                     self.render_mode_cycles = 0;
                     self.render_mode = 0;
@@ -182,7 +186,7 @@ impl Vram {
             _ => {panic!("Invalid Render Mode!")}
         }
 
-        if self.scan_row == self.lcd_stat {self.lcd_stat_int = true;}
+        if self.scan_row == self.lcd_stat {self.lcd_stat_int_request = true;}
 
     }
 
