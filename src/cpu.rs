@@ -460,7 +460,7 @@ impl Cpu {
 
     
     fn add_hl(&mut self, data: u16) {
-        if ((self.registers.hl() & 0xF0) + (data & 0xF0)) & 0x100 == 0x100 {
+        if self.registers.hl() & 0x07FF + data & 0x07FF > 0x07FF {
             self.registers.set_halfcarry(1);
         }
         else {
