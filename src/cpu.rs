@@ -283,10 +283,10 @@ impl Cpu {
     fn add8_carry(&mut self, mut data: u8) {
         if self.registers.check_carry() {
             if self.registers.a < data {
-                self.registers.a += 1;
+                self.registers.a = self.registers.a.wrapping_add(1);
             }
             else {
-                data += 1;
+                data = data.wrapping_add(1);
             }
         }
         if ((self.registers.a & 0xF) + (data & 0xF)) & 0x10 == 0x10 {
@@ -339,10 +339,10 @@ impl Cpu {
     fn sub8_carry(&mut self, mut data: u8) {
         if self.registers.check_carry() {
             if self.registers.a > data {
-                self.registers.a -= 1;
+                self.registers.a = self.registers.a.wrapping_sub(1);
             }
             else {
-                data -= 1;
+                data = data.wrapping_sub(1);
             }
         }
         if data & 0xF > self.registers.a & 0xF {
@@ -759,14 +759,14 @@ impl Cpu {
             //Add to SP
             0xE8 => {let byte = self.next_byte(); self.add_sp(byte as u16 ); 4},
             //INC register nn
-            0x03 => {self.registers.set_bc(self.registers.bc()+1); 2},
-            0x13 => {self.registers.set_de(self.registers.de()+1); 2},
-            0x23 => {self.registers.set_hl(self.registers.hl()+1); 2},
+            0x03 => {self.registers.set_bc(self.registers.bc().wrapping_add(1)); 2},
+            0x13 => {self.registers.set_de(self.registers.de().wrapping_add(1)); 2},
+            0x23 => {self.registers.set_hl(self.registers.hl().wrapping_add(1)); 2},
             0x33 => {self.registers.sp += 1; 2},
             //DEC register nn
-            0x0B => {self.registers.set_bc(self.registers.bc()-1); 2},
-            0x1B => {self.registers.set_de(self.registers.de()-1); 2},
-            0x2B => {self.registers.set_hl(self.registers.hl()-1); 2},
+            0x0B => {self.registers.set_bc(self.registers.bc().wrapping_sub(1)); 2},
+            0x1B => {self.registers.set_de(self.registers.de().wrapping_sub(1)); 2},
+            0x2B => {self.registers.set_hl(self.registers.hl().wrapping_sub(1)); 2},
             0x3B => {self.registers.sp = self.registers.sp.wrapping_sub(1); 2},
             //Decimal adjust register A
             0x27 => {self.registers.check_halfcarry(); self.registers.check_addsub(); 1}, //Implement
@@ -1037,7 +1037,7 @@ impl Cpu {
 
     //shift n right into Carry. MSB doesn't change
     fn sra(&mut self, mut data: u8) -> u8 {
-        let msb = (data & (1u8 << 7)) >> 7;
+        let msb = data & (1u8 << 7);
         let new_carry = data & 1u8;
         data = data >> 1;
         data |= msb;
@@ -1403,7 +1403,7 @@ mod tests {
     fn ret_test() {
         //0xC9 is return
 
-        let mut cpu = Cpu::new();
+        //let mut cpu = Cpu::new();
         //cpu.cycle()
     }
 

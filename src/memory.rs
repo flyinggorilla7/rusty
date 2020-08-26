@@ -36,7 +36,7 @@ impl Memory {
             bios_buffer[index] = data;
         }
 
-        let path = Path::new("/home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb");
+        let path = Path::new("/home/porkchop/programming/rust/rustyroms/tetris.gb");
         let file = fs::read(path).unwrap();
         println!("File Length: {}", file.len());
         let mut buffer: [u8; 65536] = [0; 65536];
@@ -127,7 +127,7 @@ impl Memory {
         match address {
             0x0000..=0x7FFF => self.memory[address as usize] = data,
             0x8000..=0x9FFF => self.vram.write_byte(address, data),
-            0xFF00 => {self.memory[0xFF00] |= 0x0F} //Reset input buttons to unpressed state when input state changes
+            0xFF00 => {self.memory[0xFF00] |= 0xCF} //Reset input buttons to unpressed state when input state changes
             //Temporary for Blaarg's Cpu tests
             0xFF01 => {   //Serial Transfer Control
                 print!("{}", data as char);
