@@ -36,7 +36,7 @@ impl Memory {
             bios_buffer[index] = data;
         }
 
-        let path = Path::new("/home/porkchop/programming/rust/rustyroms/tetris.gb");
+        let path = Path::new("/home/porkchop/programming/rust/rustyroms/gb-test-roms/cpu_instrs/individual/02-interrupts.gb");
         let file = fs::read(path).unwrap();
         println!("File Length: {}", file.len());
         let mut buffer: [u8; 65536] = [0; 65536];
@@ -103,6 +103,22 @@ impl Memory {
         match address {
             0x0000..=0x7FFF => self.memory[address as usize],
             0x8000..=0x9FFF => self.vram.read_byte(address),
+            0xFF0F => {
+                let mut data: u8 = 0xC0;
+                if self.vram.vblank_int_request {
+                    data |= 1 << 0;
+                }
+                else {
+                    data &= !(1 << 0);
+                }
+                if self.vram.lcd_stat_int_request {
+                    data |= 1 << 1;
+                }
+                else {
+                    data &= !(1 << 1);
+                }
+                data
+            }
             0xFF42 => self.vram.scroll_y,
             0xFF43 => self.vram.scroll_x,
             0xFF44 => self.vram.scan_row,

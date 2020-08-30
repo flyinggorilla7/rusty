@@ -88,7 +88,6 @@ impl Cpu {
         else {
             neumonic = self.instructions[opcode as usize].1;
             let length = self.instructions[opcode as usize].2;
-            println!("C000: {:#06X}", self.memory.read_byte(0xC000));
             if length == 2 {
                 println!("Program Counter: {:#06X}\t Next Opcode: {:#02X}\t Neumonic {}\t ${:#04X}\n", self.registers.pc - 1,opcode, neumonic, self.memory.read_byte(self.registers.pc));
             }
@@ -505,6 +504,7 @@ impl Cpu {
 
             //Push current address to stack and go to vblank interrupt handler
             if self.memory.vram.vblank_int_enable && self.memory.vram.vblank_int_request {
+                println!("Vblank Request Flags {}", self.memory.vram.vblank_int_request);
                 self.interrupts_enabled = false;
                 self.memory.vram.vblank_int_request = false;
                 self.push_word(self.registers.pc + 1);
